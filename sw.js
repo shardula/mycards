@@ -1,4 +1,4 @@
-const CACHE = 'mycards-v10';
+const CACHE = 'mycards-v11';
 const PRECACHE = ['./cards.html', './manifest.json', './icon.svg', './sw.js'];
 
 self.addEventListener('install', e => {
