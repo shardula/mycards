@@ -902,7 +902,7 @@ function renderList() {
     const vis = card.frontImage
       ? `<img src="${card.frontImage}" alt="" loading="lazy">`
       : logo
-        ? `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}18,${col}08)"><img src="${logo}" style="max-width:68%;max-height:58%;object-fit:contain" alt=""></div>`
+        ? `<div class="card-visual-ph" style="background:#fff;justify-content:center"><img src="${logo}" style="width:82%;max-height:78%;object-fit:contain;padding:6% 8%" alt=""></div>`
         : `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}28,${col}0a)"><span style="font-size:32px">${cat.icon}</span></div>`;
     const logoOverlay = (card.frontImage && logo) ? `<div class="logo-overlay"><img src="${logo}" alt=""></div>` : '';
     const bcBadge = (card.number && (card.barcodeType||'auto') !== 'none') ? '<div style="position:absolute;bottom:5px;left:6px;background:rgba(10,14,22,0.75);border-radius:6px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,0.7)">▦</div>' : '';
