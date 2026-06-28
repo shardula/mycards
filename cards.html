@@ -899,12 +899,13 @@ function renderList() {
     const es = expiryStatus(card);
     d.className = 'card-thumb' + (card.pinned ? ' pinned' : '') + (es === 'soon' ? ' expiring' : es === 'expired' ? ' expired' : '');
     d.dataset.id = card.id;
-    const logo = card.logoImage || '';
-    const vis = card.frontImage
-      logo
+    const isImg = v => v && typeof v === 'string' && v.startsWith('data:image');
+    const logo = isImg(card.logoImage) ? card.logoImage : '';
+    const front = isImg(card.frontImage) ? card.frontImage : '';
+    const vis = logo
         ? `<div class="card-visual-ph" style="background:#000"><img src="${logo}" style="width:100%;height:100%;object-fit:contain;padding:16% 12%" alt=""></div>`
-        : card.frontImage
-          ? `<img src="${card.frontImage}" alt="" loading="lazy">`
+        : front
+          ? `<img src="${front}" alt="" loading="lazy">`
           : `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}28,${col}0a)"><span style="font-size:32px">${cat.icon}</span></div>`;
     const logoOverlay = '';
     const bcBadge = (card.number && (card.barcodeType||'auto') !== 'none') ? '<div style="position:absolute;bottom:5px;left:6px;background:rgba(10,14,22,0.75);border-radius:6px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,0.7)">▦</div>' : '';
@@ -1526,8 +1527,15 @@ async function importBackup(file) {
     const incoming = Array.isArray(data) ? data : (data.cards || []);
     if (!incoming.length) { toast('No cards found in file'); return; }
     let added = 0, skipped = 0;
-    for (const card of incoming) {
+    for (const raw of incoming) {
+      // sanitize null-strings and corrupt fields from old exports
+      const card = Object.fromEntries(Object.entries(raw).map(([k,v]) => [k, v === 'null' || v === 'undefined' ? null : v]));
+      const isImg = v => v && typeof v === 'string' && v.startsWith('data:image');
+      if (isImg(card.name)) card.name = null; // data URL accidentally in name
       if (!card.id || !card.name) continue;
+      if (!isImg(card.frontImage)) card.frontImage = null;
+      if (!isImg(card.backImage)) card.backImage = null;
+      if (!isImg(card.logoImage)) card.logoImage = null;
       const exists = cards.find(c => c.id === card.id);
       if (!exists) { await DB.put(card); cards.push(card); added++; }
       else skipped++;
