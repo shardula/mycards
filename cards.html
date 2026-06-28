@@ -187,6 +187,29 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);disp
 .import-bc{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;}
 .import-badge{padding:2px 8px;border-radius:10px;font-size:10px;background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold-border);}
 .import-rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0 0 0 6px;line-height:1;flex-shrink:0;align-self:center;}
+.import-crop-btn{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;padding:3px 8px;white-space:nowrap;}
+.import-crop-btn:active{background:var(--surface);}
+
+/* Crop overlay */
+.crop-overlay{position:fixed;inset:0;background:#000;z-index:950;display:none;flex-direction:column;}
+.crop-overlay.open{display:flex;}
+.crop-top-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;flex-shrink:0;}
+.crop-title-lbl{font-size:15px;font-weight:500;color:#fff;}
+.crop-cancel{padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.1);color:#fff;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;}
+.crop-confirm{padding:8px 18px;border-radius:10px;border:none;background:var(--gold);color:#0e1117;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+.crop-stage{flex:1;position:relative;overflow:hidden;touch-action:none;user-select:none;}
+#cropImg{position:absolute;display:block;max-width:none;}
+.crop-box{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,0.6);cursor:move;touch-action:none;
+  background:linear-gradient(rgba(255,255,255,0.12) 1px,transparent 1px) 0 33.33%/100% 33.34%,
+             linear-gradient(90deg,rgba(255,255,255,0.12) 1px,transparent 1px) 33.33% 0/33.34% 100%;}
+.crop-border{position:absolute;inset:0;border:2px solid rgba(255,255,255,0.9);pointer-events:none;}
+.crop-handle{position:absolute;width:22px;height:22px;touch-action:none;}
+.crop-handle::after{content:'';position:absolute;background:#fff;border-radius:2px;}
+.ch-tl{top:-2px;left:-2px;cursor:nwse-resize;}.ch-tl::after{top:0;left:0;width:12px;height:3px;box-shadow:0 9px 0 0 #fff;}
+.ch-tr{top:-2px;right:-2px;cursor:nesw-resize;}.ch-tr::after{top:0;right:0;width:12px;height:3px;box-shadow:0 9px 0 0 #fff;}
+.ch-bl{bottom:-2px;left:-2px;cursor:nesw-resize;}.ch-bl::after{bottom:0;left:0;width:12px;height:3px;box-shadow:0 -9px 0 0 #fff;}
+.ch-br{bottom:-2px;right:-2px;cursor:nwse-resize;}.ch-br::after{bottom:0;right:0;width:12px;height:3px;box-shadow:0 -9px 0 0 #fff;}
+.crop-hint-bar{flex-shrink:0;text-align:center;padding:8px 16px calc(env(safe-area-inset-bottom,0px)+10px);font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -373,6 +396,26 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);disp
       <button class="confirm-btn danger" id="confirmYes">Delete</button>
     </div>
   </div>
+</div>
+
+<!-- ── Crop overlay ── -->
+<div class="crop-overlay" id="cropOverlay">
+  <div class="crop-top-bar">
+    <button class="crop-cancel" id="cropCancel">Cancel</button>
+    <span class="crop-title-lbl">Crop Photo</span>
+    <button class="crop-confirm" id="cropConfirm">Done ✓</button>
+  </div>
+  <div class="crop-stage" id="cropStage">
+    <img id="cropImg" alt="">
+    <div class="crop-box" id="cropBox">
+      <div class="crop-border"></div>
+      <div class="crop-handle ch-tl" data-h="tl"></div>
+      <div class="crop-handle ch-tr" data-h="tr"></div>
+      <div class="crop-handle ch-bl" data-h="bl"></div>
+      <div class="crop-handle ch-br" data-h="br"></div>
+    </div>
+  </div>
+  <div class="crop-hint-bar">Drag to move · Drag corners to resize</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -715,6 +758,7 @@ function renderImportList() {
       <div class="import-fields">
         <input class="f-input" type="text" placeholder="Card name *" style="font-size:13px;padding:8px 10px" data-name="${i}" value="${esc(d.name)}">
         <div class="import-bc">${bc}</div>
+        ${d.frontImage ? `<button class="import-crop-btn" onclick="cropImportItem(${i})">✂️ Crop</button>` : ''}
       </div>
       <button class="import-rm" onclick="removeImportDraft(${i})">✕</button>
     </div>`;
@@ -975,16 +1019,132 @@ function applySlot(side, dataUrl) {
 }
 async function handlePhoto(e, side) {
   const file = e.target.files[0]; if (!file) return;
-  const [data, scan] = await Promise.all([resizeImg(file), side === 'Front' ? scanBarcode(file) : Promise.resolve(null)]);
-  if (side === 'Front') {
-    editFront = data;
-    if (scan && !document.getElementById('fNumber').value.trim()) {
-      document.getElementById('fNumber').value = scan.value;
-      document.getElementById('fBarcodeType').value = mapBarcodeFormat(scan.format);
-      toast('Barcode auto-detected ✓');
+  const data = await resizeImg(file);
+  openCrop(data, async cropped => {
+    if (side === 'Front') {
+      editFront = cropped;
+      const blob = await fetch(cropped).then(r => r.blob());
+      const scan = await scanBarcode(blob);
+      if (scan && !document.getElementById('fNumber').value.trim()) {
+        document.getElementById('fNumber').value = scan.value;
+        document.getElementById('fBarcodeType').value = mapBarcodeFormat(scan.format);
+        toast('Barcode auto-detected ✓');
+      }
+    } else { editBack = cropped; }
+    applySlot(side, cropped);
+  });
+}
+
+// ── Crop import item ───────────────────────────
+function cropImportItem(i) {
+  if (!importDrafts[i] || !importDrafts[i].frontImage) return;
+  openCrop(importDrafts[i].frontImage, async cropped => {
+    importDrafts[i].frontImage = cropped;
+    const blob = await fetch(cropped).then(r => r.blob());
+    const scan = await scanBarcode(blob);
+    if (scan) {
+      importDrafts[i].number = scan.value;
+      importDrafts[i].barcodeType = mapBarcodeFormat(scan.format);
+      toast('Cropped · Barcode detected ✓');
+    } else {
+      toast('Photo cropped');
     }
-  } else { editBack = data; }
-  applySlot(side, data);
+    renderImportList();
+  });
+}
+
+// ── Crop engine ────────────────────────────────
+let _cropCb = null;
+let _cropNat = { w: 0, h: 0 };
+let _cropImgR = { x: 0, y: 0, w: 0, h: 0 };
+let _cropBox = { x: 0, y: 0, w: 0, h: 0 };
+let _cropDrag = null;
+const CROP_MIN = 50;
+
+function openCrop(dataUrl, callback) {
+  _cropCb = callback;
+  const img = document.getElementById('cropImg');
+  const stage = document.getElementById('cropStage');
+  img.onload = () => {
+    _cropNat = { w: img.naturalWidth, h: img.naturalHeight };
+    const sw = stage.clientWidth, sh = stage.clientHeight;
+    const ir = img.naturalWidth / img.naturalHeight;
+    const sr = sw / sh;
+    let iw, ih;
+    if (ir > sr) { iw = sw; ih = sw / ir; } else { ih = sh; iw = sh * ir; }
+    const ix = (sw - iw) / 2, iy = (sh - ih) / 2;
+    img.style.left = ix + 'px'; img.style.top = iy + 'px';
+    img.style.width = iw + 'px'; img.style.height = ih + 'px';
+    _cropImgR = { x: ix, y: iy, w: iw, h: ih };
+    const m = 0.05;
+    _cropBox = { x: ix + iw * m, y: iy + ih * m, w: iw * (1 - m * 2), h: ih * (1 - m * 2) };
+    updateCropBoxEl();
+  };
+  img.src = dataUrl;
+  document.getElementById('cropOverlay').classList.add('open');
+}
+
+function updateCropBoxEl() {
+  const el = document.getElementById('cropBox');
+  el.style.left = _cropBox.x + 'px'; el.style.top = _cropBox.y + 'px';
+  el.style.width = _cropBox.w + 'px'; el.style.height = _cropBox.h + 'px';
+}
+
+function confirmCrop() {
+  const img = document.getElementById('cropImg');
+  const r = _cropImgR, b = _cropBox;
+  const sx = _cropNat.w / r.w, sy = _cropNat.h / r.h;
+  const cx = (b.x - r.x) * sx, cy = (b.y - r.y) * sy;
+  const cw = b.w * sx, ch = b.h * sy;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(cw); canvas.height = Math.round(ch);
+  canvas.getContext('2d').drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
+  const out = canvas.toDataURL('image/jpeg', 0.88);
+  document.getElementById('cropOverlay').classList.remove('open');
+  if (_cropCb) { _cropCb(out); _cropCb = null; }
+}
+
+function cancelCrop() {
+  document.getElementById('cropOverlay').classList.remove('open');
+  _cropCb = null;
+}
+
+function initCropEvents() {
+  const stage = document.getElementById('cropStage');
+  stage.addEventListener('pointerdown', e => {
+    const h = e.target.dataset.h;
+    const onBox = !!e.target.closest('#cropBox');
+    if (!onBox) return;
+    _cropDrag = { type: h || 'move', sx: e.clientX, sy: e.clientY, sb: { ..._cropBox } };
+    stage.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }, { passive: false });
+  stage.addEventListener('pointermove', e => {
+    if (!_cropDrag) return;
+    const dx = e.clientX - _cropDrag.sx, dy = e.clientY - _cropDrag.sy;
+    const sb = _cropDrag.sb, r = _cropImgR;
+    if (_cropDrag.type === 'move') {
+      _cropBox.x = Math.max(r.x, Math.min(sb.x + dx, r.x + r.w - _cropBox.w));
+      _cropBox.y = Math.max(r.y, Math.min(sb.y + dy, r.y + r.h - _cropBox.h));
+    } else {
+      let { x, y, w, h } = sb;
+      if (_cropDrag.type === 'tl') { x = sb.x + dx; y = sb.y + dy; w = sb.w - dx; h = sb.h - dy; }
+      if (_cropDrag.type === 'tr') { y = sb.y + dy; w = sb.w + dx; h = sb.h - dy; }
+      if (_cropDrag.type === 'bl') { x = sb.x + dx; w = sb.w - dx; h = sb.h + dy; }
+      if (_cropDrag.type === 'br') { w = sb.w + dx; h = sb.h + dy; }
+      if (w < CROP_MIN) { if ('tl bl'.includes(_cropDrag.type)) x = sb.x + sb.w - CROP_MIN; w = CROP_MIN; }
+      if (h < CROP_MIN) { if ('tl tr'.includes(_cropDrag.type)) y = sb.y + sb.h - CROP_MIN; h = CROP_MIN; }
+      x = Math.max(r.x, x); y = Math.max(r.y, y);
+      w = Math.min(w, r.x + r.w - x); h = Math.min(h, r.y + r.h - y);
+      _cropBox = { x, y, w, h };
+    }
+    updateCropBoxEl();
+    e.preventDefault();
+  }, { passive: false });
+  stage.addEventListener('pointerup', () => { _cropDrag = null; });
+  stage.addEventListener('pointercancel', () => { _cropDrag = null; });
+  document.getElementById('cropConfirm').onclick = confirmCrop;
+  document.getElementById('cropCancel').onclick = cancelCrop;
 }
 function clearSlot(e, side) {
   e.stopPropagation();
@@ -1189,6 +1349,7 @@ function wireUI() {
 DB.open().then(async () => {
   cards = await DB.getAll();
   wireUI();
+  initCropEvents();
   renderList();
 });
 
