@@ -903,7 +903,7 @@ function renderList() {
     const vis = card.frontImage
       ? `<img src="${card.frontImage}" alt="" loading="lazy">`
       : logo
-        ? `<div class="card-visual-ph" style="background:#fff;justify-content:center"><img src="${logo}" style="width:82%;max-height:78%;object-fit:contain;padding:6% 8%" alt=""></div>`
+        ? `<div class="card-visual-ph" style="background:#fff;flex-direction:column;gap:0"><img src="${logo}" style="width:100%;height:100%;object-fit:contain;padding:18% 14%" alt=""></div>`
         : `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}28,${col}0a)"><span style="font-size:32px">${cat.icon}</span></div>`;
     const logoOverlay = (card.frontImage && logo) ? `<div class="logo-overlay"><img src="${logo}" alt=""></div>` : '';
     const bcBadge = (card.number && (card.barcodeType||'auto') !== 'none') ? '<div style="position:absolute;bottom:5px;left:6px;background:rgba(10,14,22,0.75);border-radius:6px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,0.7)">▦</div>' : '';
@@ -1305,7 +1305,7 @@ const LOGO_DOMAINS = {
   'shoppers drug mart':'shoppersdrugmart.ca','shoppers':'shoppersdrugmart.ca','sdc':'shoppersdrugmart.ca',
   'scene':'scene.ca','scene+':'scene.ca',
   'air miles':'airmiles.ca','airmiles':'airmiles.ca',
-  'aeroplan':'aeroplan.com',
+  'aeroplane':'aeroplan.com','aeroplan':'aeroplan.com',
   'starbucks':'starbucks.com','starbucks rewards':'starbucks.com',
   'tim hortons':'timhortons.com','tims':'timhortons.com','timmies':'timhortons.com',
   'costco':'costco.com','costco anywhere':'costco.com',
@@ -1372,6 +1372,45 @@ const LOGO_DOMAINS = {
   'dominos':'dominos.com',"domino's":'dominos.com',
   'pizzahut':'pizzahut.com','pizza hut':'pizzahut.com',
   'chipotle':'chipotle.com','five guys':'fiveguys.com',
+  'best western':'bestwestern.com','best western rewards':'bestwestern.com',
+  'avis':'avis.com','avis preferred':'avis.com',
+  'national car':'nationalcar.com','national car rental':'nationalcar.com',
+  'enterprise':'enterprise.com','enterprise rent-a-car':'enterprise.com',
+  'budget':'budget.com','budget car':'budget.com',
+  'cleo':'cleo.com',
+  'dressbarn':'dressbarn.com','dress barn':'dressbarn.com',
+  'earls':'earls.ca',"earl's":'earls.ca',"earl's kitchen":'earls.ca','earls sandwich':'earls.ca',
+  'green shield':'greenshield.ca','greenshield':'greenshield.ca','green shield canada':'greenshield.ca',
+  'fallsview casino':'fallsviewcasinoresort.com','fallsview':'fallsviewcasinoresort.com','niagara fallsview':'fallsviewcasinoresort.com',
+  'ontario health':'ontario.ca','ohip':'ontario.ca',
+  'active mississauga':'mississauga.ca','mississauga recreation':'mississauga.ca',
+  'jc penney':'jcpenney.com','jcpenny':'jcpenney.com',
+  'winners':'winners.ca','winners homesense':'winners.ca',
+  'homesense':'homesense.ca',
+  'marks':'marks.com',"mark's":'marks.com',
+  'reitmans':'reitmans.com','reitman':'reitmans.com',
+  'atmosphere':'atmosphere.ca',
+  'ardene':'ardene.com',
+  'garage':'garageclothing.com',
+  'dynamite':'dynamite.ca',
+  'aldo':'aldoshoes.com',
+  'bentley':'bentley.ca',
+  'suzy shier':'suzyshaier.com',
+  'moore':'mooresclothing.com',"moore's":'mooresclothing.com',
+  'tip top tailors':'tiptoptailors.ca',
+  'tristan':'tristanstyle.com',
+  'ashley homestore':'ashleyfurniture.com','ashley furniture':'ashleyfurniture.com',
+  'the brick':'thebrick.com',
+  'sleep country':'sleepcountry.ca',
+  'structube':'structube.com',
+  'bouclair':'bouclair.com',
+  'golf town':'golftown.com',
+  'sail':'sail.ca',
+  'mec':'mec.ca',
+  'running room':'runningroom.com',
+  'second cup':'secondcup.com',
+  'great canadian':'greatcanadian.com',
+  'casino rama':'casinorama.com',
 };
 
 function resolveDomain(name) {
