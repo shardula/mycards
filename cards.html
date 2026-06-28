@@ -62,6 +62,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .card-thumb{border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform 0.14s;background:var(--bg2);position:relative;}
 .card-thumb:active{transform:scale(0.96);}
 .card-thumb.pinned{border-color:rgba(201,168,76,0.4);}
+.card-thumb.expiring{border-color:rgba(230,160,40,0.7);}
+.card-thumb.expired{border-color:rgba(224,82,82,0.7);}
+.expiry-badge{position:absolute;top:5px;left:6px;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:600;letter-spacing:0.02em;}
+.expiry-badge.soon{background:rgba(230,160,40,0.92);color:#0e1117;}
+.expiry-badge.expired{background:rgba(224,82,82,0.92);color:#fff;}
 .card-visual{width:100%;aspect-ratio:8/5;position:relative;overflow:hidden;}
 .card-visual img{width:100%;height:100%;object-fit:cover;}
 .card-visual-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
@@ -803,6 +808,22 @@ async function saveImport() {
   toast(saved + ' card' + (saved>1?'s':'') + ' imported ✓');
 }
 
+// ── Expiry helpers ─────────────────────────────
+function parseExpiry(str) {
+  if (!str) return null;
+  const [m, y] = str.split('/');
+  if (!m || !y) return null;
+  return new Date(2000 + parseInt(y, 10), parseInt(m, 10), 0); // last day of month
+}
+function expiryStatus(card) {
+  const d = parseExpiry(card.expiry);
+  if (!d) return null;
+  const diff = d - Date.now();
+  if (diff < 0) return 'expired';
+  if (diff < 90 * 24 * 60 * 60 * 1000) return 'soon';
+  return null;
+}
+
 // ── Filtering & sorting ────────────────────────
 function filtered() {
   let list = [...cards];
@@ -816,8 +837,11 @@ function filtered() {
       (c.tags||[]).some(t => t.toLowerCase().includes(q))
     );
   }
+  const expiryRank = c => { const s = expiryStatus(c); return s === 'expired' ? 0 : s === 'soon' ? 1 : 2; };
   list.sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    const er = expiryRank(a) - expiryRank(b);
+    if (er !== 0) return er;
     if (sortMode === 'name') return a.name.localeCompare(b.name);
     if (sortMode === 'recent') return (b.createdAt||0) - (a.createdAt||0);
     if (sortMode === 'used') return (b.lastUsed||0) - (a.lastUsed||0);
@@ -853,13 +877,15 @@ function renderList() {
     const cat = CATS[card.category] || CATS.other;
     const col = card.color || '#c9a84c';
     const d = document.createElement('div');
-    d.className = 'card-thumb' + (card.pinned ? ' pinned' : '');
+    const es = expiryStatus(card);
+    d.className = 'card-thumb' + (card.pinned ? ' pinned' : '') + (es === 'soon' ? ' expiring' : es === 'expired' ? ' expired' : '');
     d.dataset.id = card.id;
     const vis = card.frontImage
       ? `<img src="${card.frontImage}" alt="" loading="lazy">`
       : `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}28,${col}0a)"><span style="font-size:32px">${cat.icon}</span></div>`;
     const bcBadge = (card.number && (card.barcodeType||'auto') !== 'none') ? '<div style="position:absolute;bottom:5px;left:6px;background:rgba(10,14,22,0.75);border-radius:6px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,0.7)">▦</div>' : '';
-    d.innerHTML = `<div class="card-visual">${vis}${card.pinned ? '<div class="pin-badge">📌</div>' : ''}${bcBadge}</div>
+    const exBadge = es ? `<div class="expiry-badge ${es}">${es === 'expired' ? 'Expired' : 'Exp ' + card.expiry}</div>` : '';
+    d.innerHTML = `<div class="card-visual">${vis}${card.pinned ? '<div class="pin-badge">📌</div>' : ''}${bcBadge}${exBadge}</div>
       <div class="card-info">
         <div class="card-name">${esc(card.name)}</div>
         ${card.holder ? `<div class="card-holder">${esc(card.holder)}</div>` : ''}
