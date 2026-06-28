@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Cards">
+<meta name="theme-color" content="#0e1117">
+<title>My Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1117;--bg2:#151820;--bg3:#1c2030;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);--text:#e8e2d4;--muted:#7a7264;--gold:#c9a84c;--gold-dim:rgba(201,168,76,0.15);--gold-border:rgba(201,168,76,0.35);--green:#4caf7d;--red:#e05252;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;max-width:430px;margin:0 auto;-webkit-font-smoothing:antialiased;}
+
+.hdr{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;border-bottom:1px solid var(--border);background:var(--bg);z-index:50;}
+.hdr-left{display:flex;flex-direction:column;}
+.hdr-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);}
+.hdr-sub{font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:1px;}
+.hdr-actions{display:flex;gap:8px;align-items:center;}
+.icon-btn{width:36px;height:36px;border-radius:11px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.13s;flex-shrink:0;}
+.icon-btn:active{background:rgba(255,255,255,0.1);}
+.icon-btn.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);}
+
+.search-wrap{flex-shrink:0;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg);display:none;position:relative;}
+.search-wrap.open{display:block;}
+.search-icon{position:absolute;left:26px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none;}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:11px;padding:9px 14px 9px 36px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;}
+.search-input::placeholder{color:var(--muted);}
+
+.cat-strip{flex-shrink:0;display:flex;gap:6px;padding:8px 14px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);background:var(--bg2);}
+.cat-strip::-webkit-scrollbar{display:none;}
+.cat-chip{flex-shrink:0;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all 0.13s;user-select:none;}
+.cat-chip.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);}
+
+.sort-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:5px 14px;background:var(--bg);}
+.sort-count{font-size:11px;color:var(--muted);}
+.sort-btn{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:8px;font-family:'Outfit',sans-serif;}
+.sort-btn:active{background:var(--surface);}
+
+.sort-menu{position:fixed;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:400;min-width:175px;display:none;overflow:hidden;}
+.sort-menu.open{display:block;}
+.sort-item{padding:11px 15px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.1s;}
+.sort-item:active{background:var(--surface);}
+.sort-item.sel{color:var(--gold);}
+.sort-check{width:14px;font-size:11px;}
+
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 90px);}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center;}
+.empty-icon{font-size:54px;margin-bottom:14px;opacity:0.45;}
+.empty-title{font-family:'Playfair Display',serif;font-size:20px;margin-bottom:6px;}
+.empty-sub{font-size:13px;color:var(--muted);line-height:1.55;}
+
+.card-thumb{border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform 0.14s;background:var(--bg2);position:relative;}
+.card-thumb:active{transform:scale(0.96);}
+.card-thumb.pinned{border-color:rgba(201,168,76,0.4);}
+.card-visual{width:100%;aspect-ratio:8/5;position:relative;overflow:hidden;}
+.card-visual img{width:100%;height:100%;object-fit:cover;}
+.card-visual-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+.pin-badge{position:absolute;top:5px;right:6px;font-size:11px;}
+.card-info{padding:8px 10px 10px;}
+.card-name{font-family:'Playfair Display',serif;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+.card-holder{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-num-prev{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:0.03em;}
+
+.fab{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);right:16px;width:54px;height:54px;border-radius:17px;background:var(--gold);border:none;color:#0e1117;font-size:28px;font-weight:300;cursor:pointer;box-shadow:0 4px 20px rgba(201,168,76,0.4);display:flex;align-items:center;justify-content:center;transition:transform 0.13s;z-index:100;line-height:1;}
+.fab:active{transform:scale(0.91);}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(4px);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+.overlay.open{display:flex;}
+.sheet{background:var(--bg2);border-radius:22px 22px 0 0;border-top:1px solid var(--border2);padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 26px);width:100%;max-width:430px;max-height:92vh;overflow-y:auto;animation:slideUp 0.22s ease;}
+.sheet.tall{max-height:96vh;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.handle{width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 16px;}
+
+.flip-wrap{width:100%;aspect-ratio:8/5;perspective:1000px;margin-bottom:10px;cursor:pointer;}
+.flip-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform 0.48s ease;}
+.flip-wrap.flipped .flip-inner{transform:rotateY(180deg);}
+.flip-face{position:absolute;inset:0;border-radius:16px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+.flip-face img{width:100%;height:100%;object-fit:cover;}
+.flip-back{transform:rotateY(180deg);}
+.flip-ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;}
+.flip-ph-lbl{font-size:11px;color:rgba(255,255,255,0.35);}
+.flip-hint{text-align:center;font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:14px;}
+
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.det-field{background:var(--bg3);border-radius:11px;padding:10px 12px;border:1px solid var(--border);}
+.det-field.wide{grid-column:1/-1;}
+.det-lbl{font-size:9px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;}
+.det-val{font-size:14px;color:var(--text);word-break:break-all;}
+.det-val.mono{font-variant-numeric:tabular-nums;letter-spacing:0.05em;}
+.copy-btn{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--gold);background:none;border:none;cursor:pointer;padding:3px 0;margin-top:3px;font-family:'Outfit',sans-serif;}
+
+.act-row{display:flex;gap:9px;margin-top:8px;}
+.act-btn{flex:1;padding:12px 8px;border-radius:13px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background 0.13s;white-space:nowrap;}
+.act-btn:active{background:rgba(255,255,255,0.08);}
+.act-btn.prim{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);}
+.act-btn.danger{background:rgba(224,82,82,0.1);border-color:rgba(224,82,82,0.28);color:var(--red);}
+
+.sheet-title{font-family:'Playfair Display',serif;font-size:20px;margin-bottom:18px;}
+.f-group{margin-bottom:13px;}
+.f-lbl{font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+.f-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:11px;padding:11px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border-color 0.15s;}
+.f-input:focus{border-color:rgba(201,168,76,0.45);}
+.f-input::placeholder{color:var(--muted);}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.photo-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.photo-slot{aspect-ratio:8/5;border-radius:13px;border:1.5px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;overflow:hidden;position:relative;background:var(--bg3);transition:border-color 0.14s;}
+.photo-slot:active{opacity:0.78;}
+.photo-slot.has-img{border-style:solid;}
+.photo-slot img{width:100%;height:100%;object-fit:cover;}
+.photo-slot input{display:none;}
+.ps-icon{font-size:22px;color:var(--muted);}
+.ps-lbl{font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
+.ps-del{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
+
+.cat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:13px;}
+.cat-tile{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:11px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;transition:all 0.13s;user-select:none;}
+.cat-tile:active{transform:scale(0.92);}
+.cat-tile.sel{border-color:var(--gold);background:var(--gold-dim);}
+.ct-icon{font-size:18px;}
+.ct-lbl{font-size:9px;color:var(--muted);text-align:center;line-height:1.2;}
+.cat-tile.sel .ct-lbl{color:var(--gold);}
+
+.color-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform 0.13s;}
+.color-dot.sel{border-color:#fff;transform:scale(1.18);}
+.color-dot:active{transform:scale(0.88);}
+
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:11px;min-height:42px;cursor:text;}
+.tag-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:20px;font-size:11px;color:var(--gold);}
+.tag-pill button{background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.tags-input{border:none;outline:none;background:transparent;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;min-width:80px;flex:1;}
+
+.save-btn{width:100%;padding:14px;border-radius:14px;background:var(--gold);border:none;color:#0e1117;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:0.03em;transition:opacity 0.13s;margin-top:6px;}
+.save-btn:active{opacity:0.84;}
+
+.toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);left:50%;transform:translateX(-50%) translateY(14px);background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:10px 18px;font-size:13px;color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,0.45);z-index:600;opacity:0;transition:opacity 0.2s,transform 0.2s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp 0.2s ease;}
+
+/* confirm dialog */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(5px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:var(--bg3);border:1px solid var(--border2);border-radius:18px;padding:24px 20px;width:100%;max-width:320px;}
+.confirm-title{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:8px;}
+.confirm-msg{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:20px;}
+.confirm-btns{display:flex;gap:9px;}
+.confirm-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;}
+.confirm-btn.danger{background:rgba(224,82,82,0.15);border-color:rgba(224,82,82,0.35);color:var(--red);}
+
+/* Barcode scan button */
+.scan-num-btn{padding:11px 13px;border-radius:11px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);cursor:pointer;white-space:nowrap;font-size:13px;flex-shrink:0;font-family:'Outfit',sans-serif;transition:background 0.13s;}
+.scan-num-btn:active{background:var(--surface);}
+
+/* Barcode display panel */
+.bc-section{background:#fff;border-radius:16px;padding:18px 14px 12px;margin-bottom:12px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.bc-section svg{max-width:100%;height:auto;display:block;}
+.bc-num{font-size:13px;color:#333;letter-spacing:0.06em;font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;}
+.bc-scan-btn{padding:8px 18px;border-radius:10px;background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:background 0.13s;}
+.bc-scan-btn:active{background:var(--surface);}
+
+/* Full-screen scan overlay */
+.scan-overlay{position:fixed;inset:0;background:#000;z-index:800;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+.scan-overlay.open{display:flex;}
+.scan-exit{position:absolute;top:calc(env(safe-area-inset-top,0px)+14px);right:16px;padding:8px 16px;border-radius:10px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer;}
+.scan-code-wrap{width:min(90vw,90vh);display:flex;align-items:center;justify-content:center;}
+.scan-code-wrap svg{width:100%;height:auto;display:block;}
+.scan-hint{color:rgba(255,255,255,0.5);font-size:13px;letter-spacing:0.1em;text-transform:uppercase;}
+.scan-bright-tip{color:rgba(255,255,255,0.4);font-size:11px;text-align:center;padding:0 24px;}
+
+/* Import wizard */
+.import-item{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.import-item:last-child{border-bottom:none;}
+.import-thumb{width:90px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--muted);}
+.import-thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px;}
+.import-fields{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.import-bc{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.import-badge{padding:2px 8px;border-radius:10px;font-size:10px;background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold-border);}
+.import-rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0 0 0 6px;line-height:1;flex-shrink:0;align-self:center;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-title">My Cards</div>
+    <div class="hdr-sub" id="hdrSub">0 cards</div>
+  </div>
+  <div class="hdr-actions">
+    <button class="icon-btn" id="btnImport" title="Import cards">📥</button>
+    <input type="file" accept="image/*" multiple id="inImport" style="display:none">
+    <button class="icon-btn" id="btnSearch" title="Search">🔍</button>
+    <button class="icon-btn" id="btnSort" title="Sort">↕</button>
+  </div>
+</div>
+
+<div class="sort-menu" id="sortMenu">
+  <div class="sort-item sel" data-s="name"><span class="sort-check">✓</span> A – Z</div>
+  <div class="sort-item" data-s="recent"><span class="sort-check"></span> Recently Added</div>
+  <div class="sort-item" data-s="used"><span class="sort-check"></span> Recently Used</div>
+  <div class="sort-item" data-s="category"><span class="sort-check"></span> By Category</div>
+</div>
+
+<div class="search-wrap" id="searchWrap">
+  <span class="search-icon">🔍</span>
+  <input type="search" class="search-input" id="searchInput" placeholder="Search by name, holder, tag…" autocomplete="off" autocorrect="off">
+</div>
+
+<div class="cat-strip" id="catStrip">
+  <div class="cat-chip active" data-c="all">All</div>
+  <div class="cat-chip" data-c="loyalty">🛒 Loyalty</div>
+  <div class="cat-chip" data-c="membership">⭐ Membership</div>
+  <div class="cat-chip" data-c="insurance">🛡️ Insurance</div>
+  <div class="cat-chip" data-c="id">🪪 ID</div>
+  <div class="cat-chip" data-c="library">📚 Library</div>
+  <div class="cat-chip" data-c="gym">💪 Gym</div>
+  <div class="cat-chip" data-c="transport">🚆 Transport</div>
+  <div class="cat-chip" data-c="health">💊 Health</div>
+  <div class="cat-chip" data-c="hotel">🏨 Hotel</div>
+  <div class="cat-chip" data-c="other">🔧 Other</div>
+</div>
+
+<div class="sort-bar">
+  <span class="sort-count" id="sortCount"></span>
+  <button class="sort-btn" id="sortLbl">A – Z ▾</button>
+</div>
+
+<div class="scroll" id="cardList"></div>
+
+<button class="fab" id="fabAdd">+</button>
+
+<!-- ── Detail overlay ── -->
+<div class="overlay" id="detOverlay">
+  <div class="sheet tall" id="detSheet">
+    <div class="handle"></div>
+    <div id="detContent"></div>
+  </div>
+</div>
+
+<!-- ── Edit overlay ── -->
+<div class="overlay" id="editOverlay">
+  <div class="sheet" id="editSheet">
+    <div class="handle"></div>
+    <div class="sheet-title" id="editTitle">Add Card</div>
+
+    <div class="f-lbl">Card Photos</div>
+    <div class="photo-pair">
+      <div class="photo-slot" id="slotFront">
+        <input type="file" accept="image/*" id="inFront">
+        <div class="ps-icon">📷</div><div class="ps-lbl">Front</div>
+      </div>
+      <div class="photo-slot" id="slotBack">
+        <input type="file" accept="image/*" id="inBack">
+        <div class="ps-icon">📷</div><div class="ps-lbl">Back</div>
+      </div>
+    </div>
+
+    <div class="f-group">
+      <div class="f-lbl">Card Name *</div>
+      <input class="f-input" id="fName" type="text" placeholder="e.g. Tesco Clubcard" autocomplete="off">
+    </div>
+    <div class="f-group">
+      <div class="f-lbl">Card Holder</div>
+      <input class="f-input" id="fHolder" type="text" placeholder="Name on card" autocomplete="off">
+    </div>
+    <div class="f-group">
+      <div class="f-lbl">Card Number</div>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <input class="f-input" id="fNumber" type="text" placeholder="Number or barcode" inputmode="text" autocomplete="off">
+        <button class="scan-num-btn" id="btnScanNum" type="button">📷 Scan</button>
+      </div>
+      <input type="file" accept="image/*" capture="environment" id="inScanNum" style="display:none">
+    </div>
+    <div class="f-group">
+      <div class="f-lbl">Display as</div>
+      <select class="f-input" id="fBarcodeType">
+        <option value="auto">Auto-detect</option>
+        <option value="qr">QR Code</option>
+        <option value="code128">Barcode (Code 128)</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+    <div class="f-row">
+      <div class="f-group">
+        <div class="f-lbl">Expiry</div>
+        <input class="f-input" id="fExpiry" type="text" placeholder="MM/YY" maxlength="5" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="f-group">
+        <div class="f-lbl">Code / PIN</div>
+        <input class="f-input" id="fCode" type="text" placeholder="PIN or code" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="f-group">
+      <div class="f-lbl">Category</div>
+      <div class="cat-grid" id="editCatGrid">
+        <div class="cat-tile sel" data-c="loyalty"><span class="ct-icon">🛒</span><span class="ct-lbl">Loyalty</span></div>
+        <div class="cat-tile" data-c="membership"><span class="ct-icon">⭐</span><span class="ct-lbl">Member</span></div>
+        <div class="cat-tile" data-c="insurance"><span class="ct-icon">🛡️</span><span class="ct-lbl">Insurance</span></div>
+        <div class="cat-tile" data-c="id"><span class="ct-icon">🪪</span><span class="ct-lbl">ID</span></div>
+        <div class="cat-tile" data-c="library"><span class="ct-icon">📚</span><span class="ct-lbl">Library</span></div>
+        <div class="cat-tile" data-c="gym"><span class="ct-icon">💪</span><span class="ct-lbl">Gym</span></div>
+        <div class="cat-tile" data-c="transport"><span class="ct-icon">🚆</span><span class="ct-lbl">Transport</span></div>
+        <div class="cat-tile" data-c="health"><span class="ct-icon">💊</span><span class="ct-lbl">Health</span></div>
+        <div class="cat-tile" data-c="hotel"><span class="ct-icon">🏨</span><span class="ct-lbl">Hotel</span></div>
+        <div class="cat-tile" data-c="other"><span class="ct-icon">🔧</span><span class="ct-lbl">Other</span></div>
+      </div>
+    </div>
+
+    <div class="f-group">
+      <div class="f-lbl">Accent Color</div>
+      <div class="color-row" id="colorRow">
+        <div class="color-dot sel" data-col="#c9a84c" style="background:#c9a84c"></div>
+        <div class="color-dot" data-col="#2a6596" style="background:#2a6596"></div>
+        <div class="color-dot" data-col="#b85c38" style="background:#b85c38"></div>
+        <div class="color-dot" data-col="#4caf7d" style="background:#4caf7d"></div>
+        <div class="color-dot" data-col="#7c5cbf" style="background:#7c5cbf"></div>
+        <div class="color-dot" data-col="#c9547c" style="background:#c9547c"></div>
+        <div class="color-dot" data-col="#2a8596" style="background:#2a8596"></div>
+        <div class="color-dot" data-col="#5a8a2a" style="background:#5a8a2a"></div>
+      </div>
+    </div>
+
+    <div class="f-group">
+      <div class="f-lbl">Notes</div>
+      <textarea class="f-input" id="fNotes" placeholder="Any extra info…" rows="3" style="resize:none;line-height:1.55"></textarea>
+    </div>
+
+    <div class="f-group">
+      <div class="f-lbl">Tags</div>
+      <div class="tags-wrap" id="tagsWrap"></div>
+    </div>
+
+    <button class="save-btn" id="saveBtn">Save Card</button>
+  </div>
+</div>
+
+<!-- ── Scan overlay ── -->
+<div class="scan-overlay" id="scanOverlay">
+  <button class="scan-exit" id="scanExit">✕ Close</button>
+  <div class="scan-code-wrap" id="scanCodeWrap"></div>
+  <div class="scan-hint">Hold up to scanner</div>
+  <div class="scan-bright-tip" id="scanBrightTip"></div>
+</div>
+
+<!-- ── Import overlay ── -->
+<div class="overlay" id="importOverlay">
+  <div class="sheet tall" id="importSheet">
+    <div class="handle"></div>
+    <div class="sheet-title" id="importTitle">Review Cards</div>
+    <div id="importList"></div>
+    <button class="save-btn" id="importSaveBtn">Save Cards</button>
+  </div>
+</div>
+
+<!-- ── Confirm dialog ── -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">Delete card?</div>
+    <div class="confirm-msg" id="confirmMsg">This cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="confirm-btn" id="confirmNo">Cancel</button>
+      <button class="confirm-btn danger" id="confirmYes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── IndexedDB ──────────────────────────────────
+const DB = {
+  _db: null,
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('MyCardsDB', 1);
+      r.onupgradeneeded = e => e.target.result.createObjectStore('cards', { keyPath: 'id' });
+      r.onsuccess = e => { this._db = e.target.result; res(); };
+      r.onerror = rej;
+    });
+  },
+  getAll() {
+    return new Promise((res, rej) => {
+      const tx = this._db.transaction('cards', 'readonly');
+      tx.objectStore('cards').getAll().onsuccess = e => res(e.target.result || []);
+      tx.onerror = rej;
+    });
+  },
+  put(card) {
+    return new Promise((res, rej) => {
+      const tx = this._db.transaction('cards', 'readwrite');
+      tx.objectStore('cards').put(card).onsuccess = () => res();
+      tx.onerror = rej;
+    });
+  },
+  del(id) {
+    return new Promise((res, rej) => {
+      const tx = this._db.transaction('cards', 'readwrite');
+      tx.objectStore('cards').delete(id).onsuccess = () => res();
+      tx.onerror = rej;
+    });
+  }
+};
+
+// ── State ──────────────────────────────────────
+let cards = [];
+let activeCard = null;
+let editCard = null;
+let editFront = null, editBack = null;
+let editColor = '#c9a84c', editCat = 'loyalty';
+let editTags = [];
+let filterCat = 'all', sortMode = 'name', searchQ = '';
+let codeShown = false, flipped = false;
+let pendingDeleteId = null;
+let importDrafts = [];
+
+const CATS = {
+  loyalty:    { icon: '🛒', label: 'Loyalty' },
+  membership: { icon: '⭐', label: 'Membership' },
+  insurance:  { icon: '🛡️', label: 'Insurance' },
+  id:         { icon: '🪪', label: 'ID' },
+  library:    { icon: '📚', label: 'Library' },
+  gym:        { icon: '💪', label: 'Gym' },
+  transport:  { icon: '🚆', label: 'Transport' },
+  health:     { icon: '💊', label: 'Health' },
+  hotel:      { icon: '🏨', label: 'Hotel' },
+  other:      { icon: '🔧', label: 'Other' },
+};
+
+const SORT_LABELS = { name: 'A – Z', recent: 'Recent', used: 'Last Used', category: 'Category' };
+
+// ── Utils ──────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function maskNum(n) {
+  if (!n) return '';
+  const c = n.replace(/\s+/g,'');
+  return c.length <= 4 ? c : '•••• ' + c.slice(-4);
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2300);
+}
+function timeAgo(ts) {
+  if (!ts) return '';
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'yesterday' : d + 'd ago';
+}
+function resizeImg(file, maxW = 1200) {
+  return new Promise(res => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const r = Math.min(1, maxW / img.width);
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.src = url;
+  });
+}
+
+// ── Barcode utilities ──────────────────────────
+async function scanBarcode(fileOrBlob) {
+  if (!('BarcodeDetector' in window)) return null;
+  try {
+    const detector = new BarcodeDetector({
+      formats: ['qr_code','code_128','ean_13','ean_8','upc_a','code_39','data_matrix','aztec','pdf417']
+    });
+    const img = new Image();
+    const url = URL.createObjectURL(fileOrBlob);
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    URL.revokeObjectURL(url);
+    const codes = await detector.detect(img);
+    return codes.length ? { value: codes[0].rawValue, format: codes[0].format } : null;
+  } catch { return null; }
+}
+function mapBarcodeFormat(fmt) {
+  return (!fmt || fmt === 'qr_code' || fmt === 'data_matrix' || fmt === 'aztec' || fmt === 'pdf417')
+    ? 'qr' : 'code128';
+}
+function detectBarcodeType(str) {
+  return /^\d+$/.test((str||'').replace(/[\s-]/g,'')) ? 'code128' : 'qr';
+}
+function resolvedBarcodeType(card) {
+  const t = card.barcodeType || 'auto';
+  if (t === 'auto') return detectBarcodeType(card.number);
+  return t;
+}
+async function handleScanNumber(file) {
+  const result = await scanBarcode(file);
+  if (result) {
+    document.getElementById('fNumber').value = result.value;
+    document.getElementById('fBarcodeType').value = mapBarcodeFormat(result.format);
+    toast('Barcode detected ✓');
+  } else {
+    toast('No barcode found — enter manually');
+  }
+}
+
+// ── Code 128 B generator ──────────────────────
+const C128_PATTERNS = [
+  212222,222122,222221,121223,121322,131222,122213,122312,132212,221213,
+  221312,231212,112232,122132,122231,113222,123122,123221,223211,221132,
+  221231,213212,223112,312131,311222,321122,321221,312212,322112,322211,
+  212123,212321,232121,111323,131123,131321,112313,132113,132311,211313,
+  231113,231311,112133,112331,132131,113123,113321,133121,313121,211331,
+  231131,213113,213311,213131,311123,311321,331121,312113,312311,332111,
+  314111,221411,431111,111224,111422,121124,121421,141122,141221,112214,
+  112412,122114,122411,142112,142211,241211,221114,413111,241112,134111,
+  111242,121142,121241,114212,124112,124211,411212,421112,421211,212141,
+  214121,412121,111143,111341,131141,114113,114311,411113,411311,113141,
+  114131,311141,411131,211412,211214,211232,2331112
+];
+function generateCode128B(text) {
+  const START_B = 104, STOP = 106;
+  const vals = [START_B];
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i) - 32;
+    if (c < 0 || c > 95) continue;
+    vals.push(c);
+  }
+  let check = START_B;
+  for (let i = 1; i < vals.length; i++) check += vals[i] * i;
+  vals.push(check % 103);
+  vals.push(STOP);
+
+  const BAR_W = 2, H = 64, QUIET = 10, TEXT_H = 14;
+  let x = QUIET;
+  const bars = [];
+  vals.forEach(v => {
+    const pat = C128_PATTERNS[v].toString().padStart(6,'0');
+    for (let i = 0; i < pat.length; i++) {
+      const w = parseInt(pat[i]) * BAR_W;
+      if (i % 2 === 0) bars.push({ x, w });
+      x += w;
+    }
+  });
+  const totalW = x + QUIET;
+  const totalH = H + TEXT_H;
+  const rects = bars.map(b => `<rect x="${b.x}" y="0" width="${b.w}" height="${H}"/>`).join('');
+  const display = text.length > 24 ? text.slice(0,12)+'…'+text.slice(-12) : text;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" style="background:#fff">
+    <g fill="#000">${rects}</g>
+    <text x="${totalW/2}" y="${H+11}" text-anchor="middle" font-family="monospace" font-size="9" fill="#333">${display}</text>
+  </svg>`;
+}
+
+// ── QR Code generator (MIT — based on qrcodejs) ─
+// Minimal QR generator for alphanumeric + byte mode, up to version 10
+(function(){
+const QR={};
+const _PAD0=0xEC,_PAD1=0x11;
+const _ALPHA='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+function _gexp(i){return GF[((i%255)+255)%255];}
+function _glog(n){if(n<1)throw'glog('+n+')';return LOG[n];}
+const GF=[],LOG=[];
+(()=>{let i=1;for(let j=0;j<256;j++){GF[j]=i;LOG[i]=j;i<<=1;if(i>255)i^=285;}})();
+function _poly(e,t){const n=[0];for(let i=0;i<e;i++)n.push(0);n[e]=1;for(let i=0;i<t;i++){const m=[];for(let j=0;j<=n.length-1;j++){const a=n[j],b=GF[(LOG[_gexp(i)]+j)%255];m.push(a^b);}while(m[0]===0&&m.length>1)m.shift();const r=[];for(let k=0;k<=e-1;k++)r.push(0);r.push(0);for(let k=0;k<n.length;k++){if(k<m.length)r[k+(e-n.length+1)]^=m[k];}n.length=0;for(const v of r)n.push(v);}}
+function encodeData(data){
+  const bytes=[];for(let i=0;i<data.length;i++)bytes.push(data.charCodeAt(i)&0xff);
+  return bytes;
+}
+function getErrBlocks(data,ec){
+  const res=[];const poly=[1];
+  for(let i=0;i<ec;i++){const t=[];for(let j=0;j<=poly.length;j++)t.push(0);for(let j=0;j<poly.length;j++){t[j]^=_gexp((LOG[poly[j]]+i)%255);t[j+1]^=0;}poly.length=0;for(const v of t)poly.push(v);}
+  const modPoly=[...data];while(modPoly.length<data.length+ec)modPoly.push(0);
+  for(let i=0;i<data.length;i++){const c=modPoly.shift();if(c===0)continue;for(let j=0;j<poly.length;j++)modPoly[j]^=_gexp((LOG[c]+LOG[poly[j]])%255);}
+  return modPoly.slice(0,ec);
+}
+// Version/EC table [version]: [total_codewords, ec_per_block, blocks, data_codewords]
+const VEC=[[0,0,0,0],[26,7,1,19],[44,10,1,34],[70,15,1,55],[100,20,2,40],[134,26,2,53],[172,18,2,86],[196,20,4,61],[242,24,4,62],[292,30,4,65],[346,18,6,73]];
+function makeQR(text){
+  if(!text)return null;
+  const data=encodeData(text);
+  let ver=1;
+  for(;ver<=10;ver++){const cap=VEC[ver][3]*VEC[ver][2];if(data.length+2<=cap)break;}
+  if(ver>10)return null;
+  const [,ecPer,blocks,dataPer]=VEC[ver];
+  const totalData=dataPer*blocks;
+  const bits=[];
+  const push=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>i)&1);};
+  push(4,4);push(data.length,8);
+  for(const b of data)push(b,8);
+  push(0,4);
+  while(bits.length%8)bits.push(0);
+  const cw=[];while(bits.length>0)cw.push(bits.splice(0,8).reduce((a,b,i)=>a|(b<<(7-i)),0));
+  let pi=0;while(cw.length<totalData)cw.push(pi++%2?_PAD1:_PAD0);
+  // split into blocks, add EC
+  const dcb=[],ecb=[];
+  let off=0;
+  for(let i=0;i<blocks;i++){const dc=cw.slice(off,off+dataPer);off+=dataPer;dcb.push(dc);ecb.push(getErrBlocks(dc,ecPer));}
+  const final=[];
+  for(let i=0;i<dataPer;i++)for(const b of dcb)final.push(b[i]);
+  for(let i=0;i<ecPer;i++)for(const b of ecb)final.push(b[i]);
+  // build matrix
+  const N=ver*4+17;
+  const mod=Array.from({length:N},()=>new Array(N).fill(null));
+  const used=Array.from({length:N},()=>new Array(N).fill(false));
+  const set=(r,c,v)=>{mod[r][c]=v;used[r][c]=true;};
+  // finder patterns
+  const finder=(r,c)=>{for(let i=-1;i<=7;i++)for(let j=-1;j<=7;j++){if(r+i<0||r+i>=N||c+j<0||c+j>=N)continue;const v=(i===0||i===6)?1:(j===0||j===6)?1:(i>=2&&i<=4&&j>=2&&j<=4)?1:0;set(r+i,c+j,v);}};
+  finder(0,0);finder(0,N-7);finder(N-7,0);
+  // timing
+  for(let i=8;i<N-8;i++){set(6,i,(i%2===0)?1:0);set(i,6,(i%2===0)?1:0);}
+  // dark module
+  set(4*ver+9,8,1);
+  // format placeholders
+  [[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[7,8],[8,8],[8,7],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0]].forEach(([r,c])=>{used[r][c]=true;});
+  [[8,N-1],[8,N-2],[8,N-3],[8,N-4],[8,N-5],[8,N-6],[8,N-7],[N-7,8],[N-6,8],[N-5,8],[N-4,8],[N-3,8],[N-2,8],[N-1,8]].forEach(([r,c])=>{used[r][c]=true;});
+  // alignment (ver>=2)
+  if(ver>=2){const ap=[6,ver<7?18:ver<14?22:26];for(const ar of ap)for(const ac of ap){if(used[ar][ac])continue;for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)set(ar+i,ac+j,(i===-2||i===2||j===-2||j===2)?1:(i===0&&j===0)?1:0);}}
+  // place data
+  let bIdx=0;let up=true;let col=N-1;
+  while(col>0){if(col===6)col--;
+    for(let rOff=0;rOff<N;rOff++){const r=up?N-1-rOff:rOff;for(let d=0;d<2;d++){const c=col-d;if(used[r][c])continue;const bit=bIdx<final.length*8?((final[bIdx>>3]>>(7-(bIdx&7)))&1):0;bIdx++;mod[r][c]=bit;}}
+    up=!up;col-=2;}
+  // mask 0: (r+c)%2==0
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(!used[r][c]&&(r+c)%2===0)mod[r][c]^=1;}
+  // render SVG
+  const SZ=4,Q=4*SZ;
+  const W=N*SZ+Q*2;
+  const rects=[];
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(mod[r][c])rects.push(`<rect x="${c*SZ+Q}" y="${r*SZ+Q}" width="${SZ}" height="${SZ}"/>`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${W}" style="background:#fff"><g fill="#000">${rects.join('')}</g></svg>`;
+}
+window._makeQR=makeQR;
+})();
+
+// ── Barcode section renderer ───────────────────
+function renderBarcodeSection(card) {
+  if (!card.number) return '';
+  const type = resolvedBarcodeType(card);
+  if (type === 'none') return '';
+  let svg = '';
+  if (type === 'qr') {
+    svg = window._makeQR(card.number) || '';
+  } else {
+    svg = generateCode128B(card.number);
+  }
+  if (!svg) return '';
+  return `<div class="bc-section">
+    ${svg}
+    <div class="bc-num">${esc(card.number)}</div>
+    <button class="bc-scan-btn" onclick="openScanMode()">⎙ Scan Mode</button>
+  </div>`;
+}
+
+function openScanMode() {
+  const c = activeCard; if (!c || !c.number) return;
+  const type = resolvedBarcodeType(c);
+  if (type === 'none') return;
+  const svg = type === 'qr' ? window._makeQR(c.number) : generateCode128B(c.number);
+  if (!svg) return;
+  document.getElementById('scanCodeWrap').innerHTML = svg;
+  const tip = document.getElementById('scanBrightTip');
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  tip.textContent = isIOS ? 'Tip: raise screen brightness before scanning' : '';
+  document.getElementById('scanOverlay').classList.add('open');
+  try { document.documentElement.requestFullscreen(); } catch(e){}
+}
+function closeScanMode() {
+  document.getElementById('scanOverlay').classList.remove('open');
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
+}
+
+// ── Import wizard ──────────────────────────────
+async function handleImport(files) {
+  if (!files || !files.length) return;
+  toast('Processing ' + files.length + ' image' + (files.length>1?'s':'') + '…');
+  const results = await Promise.all(Array.from(files).map(async f => {
+    const [img, scan] = await Promise.all([resizeImg(f), scanBarcode(f)]);
+    return {
+      frontImage: img,
+      number: scan ? scan.value : '',
+      barcodeType: scan ? mapBarcodeFormat(scan.format) : 'auto',
+      name: ''
+    };
+  }));
+  importDrafts = results;
+  renderImportList();
+  document.getElementById('importTitle').textContent = 'Review ' + results.length + ' Card' + (results.length>1?'s':'');
+  document.getElementById('importSaveBtn').textContent = 'Save ' + results.length + ' Card' + (results.length>1?'s':'');
+  document.getElementById('importOverlay').classList.add('open');
+}
+function renderImportList() {
+  const el = document.getElementById('importList');
+  if (!importDrafts.length) { el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px">No cards to import.</p>'; return; }
+  el.innerHTML = importDrafts.map((d, i) => {
+    const thumb = d.frontImage
+      ? `<img src="${d.frontImage}" alt="">`
+      : '💳';
+    const bc = d.number
+      ? `<span>${d.number.slice(0,20)}</span><span class="import-badge">${d.barcodeType === 'qr' ? 'QR' : 'Barcode'}</span>`
+      : '<span>No barcode found</span>';
+    return `<div class="import-item" data-idx="${i}">
+      <div class="import-thumb">${thumb}</div>
+      <div class="import-fields">
+        <input class="f-input" type="text" placeholder="Card name *" style="font-size:13px;padding:8px 10px" data-name="${i}" value="${esc(d.name)}">
+        <div class="import-bc">${bc}</div>
+      </div>
+      <button class="import-rm" onclick="removeImportDraft(${i})">✕</button>
+    </div>`;
+  }).join('');
+  document.getElementById('importSaveBtn').textContent = 'Save ' + importDrafts.length + ' Card' + (importDrafts.length>1?'s':'');
+}
+function removeImportDraft(i) {
+  importDrafts.splice(i, 1);
+  renderImportList();
+}
+async function saveImport() {
+  const nameInputs = document.querySelectorAll('[data-name]');
+  let saved = 0;
+  for (let i = 0; i < importDrafts.length; i++) {
+    const nameEl = document.querySelector(`[data-name="${i}"]`);
+    const name = nameEl ? nameEl.value.trim() : '';
+    if (!name) continue;
+    const now = Date.now();
+    const card = {
+      id: uid(), createdAt: now, updatedAt: now, lastUsed: 0, pinned: false,
+      name, number: importDrafts[i].number, barcodeType: importDrafts[i].barcodeType,
+      frontImage: importDrafts[i].frontImage, backImage: null,
+      holder: '', expiry: '', code: '', notes: '', category: 'loyalty', color: '#c9a84c', tags: []
+    };
+    await DB.put(card);
+    cards.push(card);
+    saved++;
+  }
+  document.getElementById('importOverlay').classList.remove('open');
+  renderList();
+  toast(saved + ' card' + (saved>1?'s':'') + ' imported ✓');
+}
+
+// ── Filtering & sorting ────────────────────────
+function filtered() {
+  let list = [...cards];
+  if (filterCat !== 'all') list = list.filter(c => c.category === filterCat);
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    list = list.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      (c.holder||'').toLowerCase().includes(q) ||
+      (c.number||'').includes(q) ||
+      (c.tags||[]).some(t => t.toLowerCase().includes(q))
+    );
+  }
+  list.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    if (sortMode === 'name') return a.name.localeCompare(b.name);
+    if (sortMode === 'recent') return (b.createdAt||0) - (a.createdAt||0);
+    if (sortMode === 'used') return (b.lastUsed||0) - (a.lastUsed||0);
+    if (sortMode === 'category') return (a.category||'').localeCompare(b.category||'');
+    return 0;
+  });
+  return list;
+}
+
+// ── Render list ────────────────────────────────
+function renderList() {
+  const list = filtered();
+  const el = document.getElementById('cardList');
+  const sub = document.getElementById('hdrSub');
+  sub.textContent = cards.length === 1 ? '1 card stored' : `${cards.length} cards stored`;
+  document.getElementById('sortCount').textContent =
+    list.length !== cards.length ? `${list.length} of ${cards.length}` : `${cards.length} total`;
+
+  if (!list.length) {
+    const msg = cards.length === 0
+      ? ['💳', 'No cards yet', 'Tap + to add your first card — loyalty, gym, library, ID and more.']
+      : ['🔍', 'No matches', 'Try a different search term or category filter.'];
+    el.innerHTML = `<div class="empty-state fade-up">
+      <div class="empty-icon">${msg[0]}</div>
+      <div class="empty-title">${msg[1]}</div>
+      <div class="empty-sub">${msg[2]}</div></div>`;
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid fade-up';
+  list.forEach(card => {
+    const cat = CATS[card.category] || CATS.other;
+    const col = card.color || '#c9a84c';
+    const d = document.createElement('div');
+    d.className = 'card-thumb' + (card.pinned ? ' pinned' : '');
+    d.dataset.id = card.id;
+    const vis = card.frontImage
+      ? `<img src="${card.frontImage}" alt="" loading="lazy">`
+      : `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}28,${col}0a)"><span style="font-size:32px">${cat.icon}</span></div>`;
+    const bcBadge = (card.number && (card.barcodeType||'auto') !== 'none') ? '<div style="position:absolute;bottom:5px;left:6px;background:rgba(10,14,22,0.75);border-radius:6px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,0.7)">▦</div>' : '';
+    d.innerHTML = `<div class="card-visual">${vis}${card.pinned ? '<div class="pin-badge">📌</div>' : ''}${bcBadge}</div>
+      <div class="card-info">
+        <div class="card-name">${esc(card.name)}</div>
+        ${card.holder ? `<div class="card-holder">${esc(card.holder)}</div>` : ''}
+        ${card.number ? `<div class="card-num-prev">${maskNum(card.number)}</div>` : ''}
+      </div>`;
+    d.addEventListener('click', () => openDetail(card.id));
+    grid.appendChild(d);
+  });
+  el.innerHTML = '';
+  el.appendChild(grid);
+}
+
+// ── Detail view ────────────────────────────────
+function openDetail(id) {
+  activeCard = cards.find(c => c.id === id);
+  if (!activeCard) return;
+  flipped = false; codeShown = false;
+  if (activeCard) { activeCard.lastUsed = Date.now(); DB.put(activeCard); }
+  renderDetail();
+  document.getElementById('detOverlay').classList.add('open');
+}
+
+function renderDetail() {
+  const c = activeCard;
+  const cat = CATS[c.category] || CATS.other;
+  const col = c.color || '#c9a84c';
+
+  const makeFace = (img, label, rotate) => {
+    const style = `background:linear-gradient(135deg,${col}30,${col}0c)`;
+    return `<div class="flip-face ${rotate ? 'flip-back' : ''}">
+      ${img ? `<img src="${img}" alt="${label}">` :
+        `<div class="flip-ph" style="${style}"><span style="font-size:48px">${cat.icon}</span><span class="flip-ph-lbl">No ${label.toLowerCase()} photo</span></div>`}
+    </div>`;
+  };
+
+  const fields = [];
+  if (c.holder) fields.push({ l:'Card Holder', v:c.holder });
+  if (c.number) fields.push({ l:'Card Number', v:c.number, mono:true, copy:true });
+  if (c.expiry)  fields.push({ l:'Expiry', v:c.expiry, mono:true });
+  if (c.code)    fields.push({ l:'Code / PIN', v:'••••', mono:true, toggle:true, id:'codeVal' });
+  if (c.category) fields.push({ l:'Category', v:`${cat.icon} ${cat.label}` });
+  if (c.notes)   fields.push({ l:'Notes', v:c.notes, wide:true });
+  if (c.tags && c.tags.length) fields.push({ l:'Tags', v:c.tags.join(' · '), wide:true });
+
+  const fieldsHtml = fields.map(f => `
+    <div class="det-field ${f.wide ? 'wide' : ''}">
+      <div class="det-lbl">${f.l}</div>
+      <div class="det-val ${f.mono ? 'mono' : ''}" ${f.id ? `id="${f.id}"` : ''}>${esc(f.v)}</div>
+      ${f.copy ? `<button class="copy-btn" data-copy="${esc(c.number)}" onclick="copyField(this)">⎘ Copy number</button>` : ''}
+      ${f.toggle ? `<button class="copy-btn" id="toggleCode" onclick="doToggleCode()">👁 Show</button>` : ''}
+    </div>`).join('');
+
+  document.getElementById('detContent').innerHTML = `
+    <div style="font-family:'Playfair Display',serif;font-size:20px;margin-bottom:10px">${esc(c.name)}</div>
+    ${renderBarcodeSection(c)}
+    <div class="flip-wrap ${flipped ? 'flipped' : ''}" id="flipWrap" onclick="doFlip()">
+      <div class="flip-inner">
+        ${makeFace(c.frontImage, 'Front', false)}
+        ${makeFace(c.backImage, 'Back', true)}
+      </div>
+    </div>
+    <div class="flip-hint" id="flipHint">Tap to flip · ${flipped ? 'Back' : 'Front'}</div>
+    <div class="det-grid">${fieldsHtml}</div>
+    <div class="act-row">
+      <button class="act-btn" onclick="doPin()">📌 ${c.pinned ? 'Unpin' : 'Pin'}</button>
+      <button class="act-btn prim" onclick="openEdit('${c.id}')">✏️ Edit</button>
+      <button class="act-btn danger" onclick="askDelete('${c.id}')">🗑</button>
+    </div>`;
+}
+
+function doFlip() {
+  flipped = !flipped;
+  const w = document.getElementById('flipWrap'), h = document.getElementById('flipHint');
+  if (w) w.className = 'flip-wrap' + (flipped ? ' flipped' : '');
+  if (h) h.textContent = `Tap to flip · ${flipped ? 'Back' : 'Front'}`;
+}
+function doToggleCode() {
+  codeShown = !codeShown;
+  const v = document.getElementById('codeVal'), b = document.getElementById('toggleCode');
+  if (v && activeCard) v.textContent = codeShown ? activeCard.code : '••••';
+  if (b) b.textContent = codeShown ? '👁 Hide' : '👁 Show';
+}
+function copyField(btn) {
+  const val = btn.dataset.copy;
+  navigator.clipboard.writeText(val).then(() => toast('Copied!')).catch(() => toast('Copy failed'));
+}
+async function doPin() {
+  activeCard.pinned = !activeCard.pinned;
+  activeCard.updatedAt = Date.now();
+  await DB.put(activeCard);
+  const idx = cards.findIndex(c => c.id === activeCard.id);
+  if (idx >= 0) cards[idx] = activeCard;
+  renderDetail(); renderList();
+  toast(activeCard.pinned ? 'Pinned to top' : 'Unpinned');
+}
+function askDelete(id) {
+  pendingDeleteId = id;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+async function doDelete() {
+  if (!pendingDeleteId) return;
+  await DB.del(pendingDeleteId);
+  cards = cards.filter(c => c.id !== pendingDeleteId);
+  pendingDeleteId = null;
+  document.getElementById('confirmOverlay').classList.remove('open');
+  document.getElementById('detOverlay').classList.remove('open');
+  renderList(); toast('Card deleted');
+}
+
+// ── Edit / Add ─────────────────────────────────
+function openAdd() {
+  editCard = null; editFront = null; editBack = null;
+  editColor = '#c9a84c'; editCat = 'loyalty'; editTags = [];
+  document.getElementById('editTitle').textContent = 'Add Card';
+  ['fName','fHolder','fNumber','fExpiry','fCode','fNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fBarcodeType').value = 'auto';
+  resetSlots(); syncCatTiles(); syncColorDots(); rebuildTags();
+  document.getElementById('editOverlay').classList.add('open');
+}
+function openEdit(id) {
+  editCard = cards.find(c => c.id === id);
+  if (!editCard) return;
+  editFront = editCard.frontImage || null;
+  editBack  = editCard.backImage  || null;
+  editColor = editCard.color || '#c9a84c';
+  editCat   = editCard.category || 'loyalty';
+  editTags  = [...(editCard.tags || [])];
+  document.getElementById('editTitle').textContent = 'Edit Card';
+  document.getElementById('fName').value    = editCard.name    || '';
+  document.getElementById('fHolder').value  = editCard.holder  || '';
+  document.getElementById('fNumber').value  = editCard.number  || '';
+  document.getElementById('fExpiry').value  = editCard.expiry  || '';
+  document.getElementById('fCode').value    = editCard.code    || '';
+  document.getElementById('fNotes').value   = editCard.notes   || '';
+  document.getElementById('fBarcodeType').value = editCard.barcodeType || 'auto';
+  resetSlots();
+  if (editFront) applySlot('Front', editFront);
+  if (editBack)  applySlot('Back',  editBack);
+  syncCatTiles(); syncColorDots(); rebuildTags();
+  document.getElementById('editOverlay').classList.add('open');
+}
+
+function resetSlots() {
+  ['Front','Back'].forEach(side => {
+    const slot = document.getElementById(`slot${side}`);
+    const inId  = `in${side}`;
+    slot.classList.remove('has-img');
+    slot.innerHTML = `<input type="file" accept="image/*" id="${inId}">
+      <div class="ps-icon">📷</div><div class="ps-lbl">${side}</div>`;
+    slot.onclick = () => document.getElementById(inId).click();
+    document.getElementById(inId).onchange = e => handlePhoto(e, side);
+  });
+}
+function applySlot(side, dataUrl) {
+  const slot = document.getElementById(`slot${side}`);
+  const inId  = `in${side}`;
+  slot.classList.add('has-img');
+  slot.innerHTML = `<input type="file" accept="image/*" id="${inId}">
+    <img src="${dataUrl}" alt="${side}">
+    <div class="ps-del" onclick="clearSlot(event,'${side}')">×</div>`;
+  slot.onclick = () => document.getElementById(inId).click();
+  document.getElementById(inId).onchange = e => handlePhoto(e, side);
+}
+async function handlePhoto(e, side) {
+  const file = e.target.files[0]; if (!file) return;
+  const [data, scan] = await Promise.all([resizeImg(file), side === 'Front' ? scanBarcode(file) : Promise.resolve(null)]);
+  if (side === 'Front') {
+    editFront = data;
+    if (scan && !document.getElementById('fNumber').value.trim()) {
+      document.getElementById('fNumber').value = scan.value;
+      document.getElementById('fBarcodeType').value = mapBarcodeFormat(scan.format);
+      toast('Barcode auto-detected ✓');
+    }
+  } else { editBack = data; }
+  applySlot(side, data);
+}
+function clearSlot(e, side) {
+  e.stopPropagation();
+  if (side === 'Front') editFront = null; else editBack = null;
+  resetSlots();
+  if (editFront) applySlot('Front', editFront);
+  if (editBack)  applySlot('Back',  editBack);
+}
+function syncCatTiles() {
+  document.querySelectorAll('#editCatGrid .cat-tile').forEach(t =>
+    t.classList.toggle('sel', t.dataset.c === editCat));
+}
+function syncColorDots() {
+  document.querySelectorAll('#colorRow .color-dot').forEach(d =>
+    d.classList.toggle('sel', d.dataset.col === editColor));
+}
+function rebuildTags() {
+  const wrap = document.getElementById('tagsWrap');
+  wrap.innerHTML = '';
+  editTags.forEach(tag => {
+    const pill = document.createElement('div');
+    pill.className = 'tag-pill';
+    pill.innerHTML = `${esc(tag)}<button type="button" aria-label="Remove ${esc(tag)}">×</button>`;
+    pill.querySelector('button').onclick = () => { editTags = editTags.filter(t => t !== tag); rebuildTags(); };
+    wrap.appendChild(pill);
+  });
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.className = 'tags-input'; inp.placeholder = 'Add tag + Enter…';
+  inp.onkeydown = ev => {
+    if ((ev.key === 'Enter' || ev.key === ',') && inp.value.trim()) {
+      ev.preventDefault();
+      const v = inp.value.trim().replace(/,/g,'');
+      if (!editTags.includes(v)) { editTags.push(v); rebuildTags(); }
+      else inp.value = '';
+    }
+    if (ev.key === 'Backspace' && !inp.value && editTags.length) {
+      editTags.pop(); rebuildTags();
+    }
+  };
+  wrap.appendChild(inp);
+  wrap.onclick = () => inp.focus();
+}
+
+async function saveCard() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { toast('Card name is required'); return; }
+  const now = Date.now();
+  const card = editCard
+    ? { ...editCard }
+    : { id: uid(), createdAt: now, pinned: false, lastUsed: 0 };
+
+  card.name      = name;
+  card.holder    = document.getElementById('fHolder').value.trim();
+  card.number    = document.getElementById('fNumber').value.trim();
+  card.expiry    = document.getElementById('fExpiry').value.trim();
+  card.code      = document.getElementById('fCode').value.trim();
+  card.notes     = document.getElementById('fNotes').value.trim();
+  card.category  = editCat;
+  card.color     = editColor;
+  card.tags       = [...editTags];
+  card.barcodeType = document.getElementById('fBarcodeType').value;
+  card.frontImage = editFront;
+  card.backImage  = editBack;
+  card.updatedAt  = now;
+
+  await DB.put(card);
+  const idx = cards.findIndex(c => c.id === card.id);
+  if (idx >= 0) cards[idx] = card; else cards.push(card);
+
+  document.getElementById('editOverlay').classList.remove('open');
+  document.getElementById('detOverlay').classList.remove('open');
+  renderList();
+  toast(editCard ? 'Card updated ✓' : 'Card saved ✓');
+}
+
+// ── Event wiring ───────────────────────────────
+function wireUI() {
+  document.getElementById('fabAdd').onclick = openAdd;
+  document.getElementById('saveBtn').onclick = saveCard;
+
+  // Confirm dialog
+  document.getElementById('confirmNo').onclick = () => {
+    pendingDeleteId = null;
+    document.getElementById('confirmOverlay').classList.remove('open');
+  };
+  document.getElementById('confirmYes').onclick = doDelete;
+
+  // Close overlays on backdrop click
+  ['detOverlay','editOverlay'].forEach(id => {
+    document.getElementById(id).onclick = e => {
+      if (e.target.id === id) document.getElementById(id).classList.remove('open');
+    };
+  });
+
+  // Search
+  const btnSearch = document.getElementById('btnSearch');
+  const searchWrap = document.getElementById('searchWrap');
+  const searchInput = document.getElementById('searchInput');
+  btnSearch.onclick = () => {
+    const open = searchWrap.classList.toggle('open');
+    btnSearch.classList.toggle('active', open);
+    if (open) setTimeout(() => searchInput.focus(), 50);
+    else { searchInput.value = ''; searchQ = ''; renderList(); }
+  };
+  let searchTimer;
+  searchInput.oninput = () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { searchQ = searchInput.value.trim(); renderList(); }, 160);
+  };
+
+  // Category strip
+  document.getElementById('catStrip').onclick = e => {
+    const chip = e.target.closest('.cat-chip');
+    if (!chip) return;
+    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    filterCat = chip.dataset.c;
+    renderList();
+  };
+
+  // Sort menu
+  const btnSort = document.getElementById('btnSort');
+  const sortMenu = document.getElementById('sortMenu');
+  btnSort.onclick = e => {
+    e.stopPropagation();
+    const r = btnSort.getBoundingClientRect();
+    sortMenu.style.top  = (r.bottom + 5) + 'px';
+    sortMenu.style.right = (window.innerWidth - r.right) + 'px';
+    sortMenu.classList.toggle('open');
+  };
+  document.addEventListener('click', e => {
+    if (!sortMenu.contains(e.target) && e.target !== btnSort)
+      sortMenu.classList.remove('open');
+  });
+  sortMenu.querySelectorAll('.sort-item').forEach(item => {
+    item.onclick = () => {
+      sortMode = item.dataset.s;
+      sortMenu.querySelectorAll('.sort-item').forEach(i => {
+        i.classList.remove('sel');
+        i.querySelector('.sort-check').textContent = '';
+      });
+      item.classList.add('sel');
+      item.querySelector('.sort-check').textContent = '✓';
+      document.getElementById('sortLbl').textContent = SORT_LABELS[sortMode] + ' ▾';
+      sortMenu.classList.remove('open');
+      renderList();
+    };
+  });
+
+  // Edit category tiles
+  document.getElementById('editCatGrid').onclick = e => {
+    const t = e.target.closest('.cat-tile');
+    if (!t) return;
+    editCat = t.dataset.c; syncCatTiles();
+  };
+
+  // Color picker
+  document.getElementById('colorRow').onclick = e => {
+    const d = e.target.closest('.color-dot');
+    if (!d) return;
+    editColor = d.dataset.col; syncColorDots();
+  };
+
+  // Expiry auto-format
+  document.getElementById('fExpiry').oninput = e => {
+    let v = e.target.value.replace(/\D/g,'');
+    if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2,4);
+    e.target.value = v;
+  };
+
+  // Scan number button
+  document.getElementById('btnScanNum').onclick = () => document.getElementById('inScanNum').click();
+  document.getElementById('inScanNum').onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    handleScanNumber(f);
+    e.target.value = '';
+  };
+  if (!('BarcodeDetector' in window)) {
+    document.getElementById('btnScanNum').style.opacity = '0.4';
+    document.getElementById('btnScanNum').title = 'Not supported on this browser';
+  }
+
+  // Scan overlay
+  document.getElementById('scanExit').onclick = closeScanMode;
+  document.getElementById('scanOverlay').onclick = e => {
+    if (e.target.id === 'scanOverlay') closeScanMode();
+  };
+
+  // Import
+  document.getElementById('btnImport').onclick = () => document.getElementById('inImport').click();
+  document.getElementById('inImport').onchange = e => {
+    handleImport(e.target.files);
+    e.target.value = '';
+  };
+  document.getElementById('importOverlay').onclick = e => {
+    if (e.target.id === 'importOverlay') document.getElementById('importOverlay').classList.remove('open');
+  };
+  document.getElementById('importSaveBtn').onclick = saveImport;
+}
+
+// ── Boot ───────────────────────────────────────
+DB.open().then(async () => {
+  cards = await DB.getAll();
+  wireUI();
+  renderList();
+});
+</script>
+</body>
+</html>
