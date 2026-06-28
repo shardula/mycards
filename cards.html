@@ -233,6 +233,10 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);disp
   <div class="sort-item" data-s="recent"><span class="sort-check"></span> Recently Added</div>
   <div class="sort-item" data-s="used"><span class="sort-check"></span> Recently Used</div>
   <div class="sort-item" data-s="category"><span class="sort-check"></span> By Category</div>
+  <div style="height:1px;background:var(--border);margin:3px 0"></div>
+  <div class="sort-item" id="menuExport">📤 Export backup</div>
+  <div class="sort-item" id="menuImport">📂 Import backup</div>
+  <input type="file" accept=".json" id="inBackup" style="display:none">
 </div>
 
 <div class="search-wrap" id="searchWrap">
@@ -1234,6 +1238,42 @@ async function saveCard() {
   toast(editCard ? 'Card updated ✓' : 'Card saved ✓');
 }
 
+// ── Export / Import backup ─────────────────────
+async function exportCards() {
+  const all = await DB.getAll();
+  if (!all.length) { toast('No cards to export'); return; }
+  const payload = JSON.stringify({ version: 1, cards: all });
+  const blob = new Blob([payload], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `mycards-${date}.json`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast(`Exported ${all.length} card${all.length !== 1 ? 's' : ''} ✓`);
+}
+
+async function importBackup(file) {
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const incoming = Array.isArray(data) ? data : (data.cards || []);
+    if (!incoming.length) { toast('No cards found in file'); return; }
+    let added = 0, skipped = 0;
+    for (const card of incoming) {
+      if (!card.id || !card.name) continue;
+      const exists = cards.find(c => c.id === card.id);
+      if (!exists) { await DB.put(card); cards.push(card); added++; }
+      else skipped++;
+    }
+    renderList();
+    const msg = added ? `${added} card${added !== 1 ? 's' : ''} imported ✓` + (skipped ? ` · ${skipped} already existed` : '') : 'All cards already exist';
+    toast(msg);
+  } catch {
+    toast('Invalid backup file');
+  }
+}
+
 // ── Event wiring ───────────────────────────────
 function wireUI() {
   document.getElementById('fabAdd').onclick = openAdd;
@@ -1293,10 +1333,10 @@ function wireUI() {
     if (!sortMenu.contains(e.target) && e.target !== btnSort)
       sortMenu.classList.remove('open');
   });
-  sortMenu.querySelectorAll('.sort-item').forEach(item => {
+  sortMenu.querySelectorAll('.sort-item[data-s]').forEach(item => {
     item.onclick = () => {
       sortMode = item.dataset.s;
-      sortMenu.querySelectorAll('.sort-item').forEach(i => {
+      sortMenu.querySelectorAll('.sort-item[data-s]').forEach(i => {
         i.classList.remove('sel');
         i.querySelector('.sort-check').textContent = '';
       });
@@ -1307,6 +1347,11 @@ function wireUI() {
       renderList();
     };
   });
+
+  // Export / import backup
+  document.getElementById('menuExport').onclick = () => { sortMenu.classList.remove('open'); exportCards(); };
+  document.getElementById('menuImport').onclick = () => { sortMenu.classList.remove('open'); document.getElementById('inBackup').click(); };
+  document.getElementById('inBackup').onchange = e => { const f = e.target.files[0]; if (f) importBackup(f); e.target.value = ''; };
 
   // Edit category tiles
   document.getElementById('editCatGrid').onclick = e => {
