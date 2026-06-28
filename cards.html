@@ -67,6 +67,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .expiry-badge{position:absolute;top:5px;left:6px;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:600;letter-spacing:0.02em;}
 .expiry-badge.soon{background:rgba(230,160,40,0.92);color:#0e1117;}
 .expiry-badge.expired{background:rgba(224,82,82,0.92);color:#fff;}
+.logo-overlay{position:absolute;bottom:6px;right:6px;width:34px;height:34px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.35);flex-shrink:0;}
+.logo-overlay img{width:26px;height:26px;object-fit:contain;}
+.logo-slot{width:56px;height:56px;border-radius:13px;border:1.5px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;overflow:hidden;position:relative;background:var(--bg3);flex-shrink:0;transition:border-color 0.14s;}
+.logo-slot:active{opacity:0.78;}
+.logo-slot.has-logo{border-style:solid;background:#fff;}
+.logo-slot img{width:44px;height:44px;object-fit:contain;}
+.logo-slot input{display:none;}
+.logo-slot-del{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
 .card-visual{width:100%;aspect-ratio:8/5;position:relative;overflow:hidden;}
 .card-visual img{width:100%;height:100%;object-fit:cover;}
 .card-visual-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
@@ -300,6 +308,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       </div>
     </div>
 
+    <div class="f-group" style="display:flex;align-items:center;gap:12px">
+      <div class="logo-slot" id="logoSlot">
+        <input type="file" accept="image/*" id="inLogo">
+        <span style="font-size:18px;color:var(--muted)">🏪</span>
+        <span style="font-size:8px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase">Logo</span>
+      </div>
+      <div style="flex:1;font-size:12px;color:var(--muted);line-height:1.5">Logo auto-fetched from card name · or tap to upload your own</div>
+    </div>
+
     <div class="f-group">
       <div class="f-lbl">Card Name *</div>
       <input class="f-input" id="fName" type="text" placeholder="e.g. Tesco Clubcard" autocomplete="off">
@@ -475,7 +492,7 @@ const DB = {
 let cards = [];
 let activeCard = null;
 let editCard = null;
-let editFront = null, editBack = null;
+let editFront = null, editBack = null, editLogo = null;
 let editColor = '#c9a84c', editCat = 'loyalty';
 let editTags = [];
 let filterCat = 'all', sortMode = 'name', searchQ = '';
@@ -880,12 +897,16 @@ function renderList() {
     const es = expiryStatus(card);
     d.className = 'card-thumb' + (card.pinned ? ' pinned' : '') + (es === 'soon' ? ' expiring' : es === 'expired' ? ' expired' : '');
     d.dataset.id = card.id;
+    const logo = card.logoImage || '';
     const vis = card.frontImage
       ? `<img src="${card.frontImage}" alt="" loading="lazy">`
-      : `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}28,${col}0a)"><span style="font-size:32px">${cat.icon}</span></div>`;
+      : logo
+        ? `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}18,${col}08)"><img src="${logo}" style="max-width:68%;max-height:58%;object-fit:contain" alt=""></div>`
+        : `<div class="card-visual-ph" style="background:linear-gradient(135deg,${col}28,${col}0a)"><span style="font-size:32px">${cat.icon}</span></div>`;
+    const logoOverlay = (card.frontImage && logo) ? `<div class="logo-overlay"><img src="${logo}" alt=""></div>` : '';
     const bcBadge = (card.number && (card.barcodeType||'auto') !== 'none') ? '<div style="position:absolute;bottom:5px;left:6px;background:rgba(10,14,22,0.75);border-radius:6px;padding:2px 6px;font-size:10px;color:rgba(255,255,255,0.7)">▦</div>' : '';
     const exBadge = es ? `<div class="expiry-badge ${es}">${es === 'expired' ? 'Expired' : 'Exp ' + card.expiry}</div>` : '';
-    d.innerHTML = `<div class="card-visual">${vis}${card.pinned ? '<div class="pin-badge">📌</div>' : ''}${bcBadge}${exBadge}</div>
+    d.innerHTML = `<div class="card-visual">${vis}${card.pinned ? '<div class="pin-badge">📌</div>' : ''}${bcBadge}${logoOverlay}${exBadge}</div>
       <div class="card-info">
         <div class="card-name">${esc(card.name)}</div>
         ${card.holder ? `<div class="card-holder">${esc(card.holder)}</div>` : ''}
@@ -1002,12 +1023,12 @@ async function doDelete() {
 
 // ── Edit / Add ─────────────────────────────────
 function openAdd() {
-  editCard = null; editFront = null; editBack = null;
+  editCard = null; editFront = null; editBack = null; editLogo = null;
   editColor = '#c9a84c'; editCat = 'loyalty'; editTags = [];
   document.getElementById('editTitle').textContent = 'Add Card';
   ['fName','fHolder','fNumber','fExpiry','fCode','fNotes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fBarcodeType').value = 'auto';
-  resetSlots(); syncCatTiles(); syncColorDots(); rebuildTags();
+  resetSlots(); resetLogoSlot(); syncCatTiles(); syncColorDots(); rebuildTags();
   document.getElementById('editOverlay').classList.add('open');
 }
 function openEdit(id) {
@@ -1015,6 +1036,7 @@ function openEdit(id) {
   if (!editCard) return;
   editFront = editCard.frontImage || null;
   editBack  = editCard.backImage  || null;
+  editLogo  = editCard.logoImage  || null;
   editColor = editCard.color || '#c9a84c';
   editCat   = editCard.category || 'loyalty';
   editTags  = [...(editCard.tags || [])];
@@ -1026,9 +1048,10 @@ function openEdit(id) {
   document.getElementById('fCode').value    = editCard.code    || '';
   document.getElementById('fNotes').value   = editCard.notes   || '';
   document.getElementById('fBarcodeType').value = editCard.barcodeType || 'auto';
-  resetSlots();
+  resetSlots(); resetLogoSlot();
   if (editFront) applySlot('Front', editFront);
   if (editBack)  applySlot('Back',  editBack);
+  if (editLogo)  applyLogoSlot(editLogo);
   syncCatTiles(); syncColorDots(); rebuildTags();
   document.getElementById('editOverlay').classList.add('open');
 }
@@ -1254,6 +1277,8 @@ async function saveCard() {
   card.barcodeType = document.getElementById('fBarcodeType').value;
   card.frontImage = editFront;
   card.backImage  = editBack;
+  card.logoImage  = editLogo;
+  card.logoManual = editLogo ? true : (card.logoManual || false);
   card.updatedAt  = now;
 
   await DB.put(card);
@@ -1264,6 +1289,129 @@ async function saveCard() {
   document.getElementById('detOverlay').classList.remove('open');
   renderList();
   toast(editCard ? 'Card updated ✓' : 'Card saved ✓');
+}
+
+// ── Logo fetch ─────────────────────────────────
+const LOGO_DOMAINS = {
+  'hilton':'hilton.com','hilton honors':'hilton.com','hilton hhonors':'hilton.com',
+  'marriott':'marriott.com','marriott bonvoy':'marriott.com',
+  'ikea':'ikea.com','ikea family':'ikea.com',
+  'hertz':'hertz.com','hertz gold':'hertz.com',
+  "longo's":'longos.com','longos':'longos.com',
+  "hudson's bay":'thebay.com','hudson bay':'thebay.com','the bay':'thebay.com','hbc':'thebay.com',
+  'pc optimum':'pcoptimum.ca','pc':'pcoptimum.ca',
+  'shoppers drug mart':'shoppersdrugmart.ca','shoppers':'shoppersdrugmart.ca','sdc':'shoppersdrugmart.ca',
+  'scene':'scene.ca','scene+':'scene.ca',
+  'air miles':'airmiles.ca','airmiles':'airmiles.ca',
+  'aeroplan':'aeroplan.com',
+  'starbucks':'starbucks.com','starbucks rewards':'starbucks.com',
+  'tim hortons':'timhortons.com','tims':'timhortons.com','timmies':'timhortons.com',
+  'costco':'costco.com','costco anywhere':'costco.com',
+  'walmart':'walmart.com','walmart rewards':'walmart.com',
+  'amazon':'amazon.com','amazon prime':'amazon.com',
+  'best buy':'bestbuy.com',
+  'home depot':'homedepot.com','the home depot':'homedepot.com',
+  "lowe's":'lowes.com','lowes':'lowes.com',
+  'jcpenney':'jcpenney.com','jc penney':'jcpenney.com',
+  'tesco':'tesco.com','tesco clubcard':'tesco.com',
+  'sainsbury':'sainsburys.co.uk',"sainsbury's":'sainsburys.co.uk',
+  'boots':'boots.com','boots advantage':'boots.com',
+  'nectar':'nectar.com','nectar card':'nectar.com',
+  'plum rewards':'indigo.ca','indigo':'indigo.ca','chapters':'indigo.ca','coles':'indigo.ca',
+  'sport chek':'sportchek.ca','sportchek':'sportchek.ca',
+  'canadian tire':'canadiantire.ca','triangle rewards':'canadiantire.ca',
+  'petro-canada':'petro-canada.ca','petro canada':'petro-canada.ca','petro-points':'petro-canada.ca',
+  'esso':'esso.com','esso extra':'esso.com',
+  'shell':'shell.com','shell go+':'shell.com',
+  'rexall':'rexall.ca','rexall be well':'rexall.ca',
+  'sobeys':'sobeys.com','sobeys club':'sobeys.com',
+  'metro':'metro.ca','metro&moi':'metro.ca',
+  'food basics':'foodbasics.ca',
+  'no frills':'nofrills.ca',
+  'lcbo':'lcbo.com',
+  'sephora':'sephora.com','sephora beauty insider':'sephora.com',
+  'gap':'gap.com','gap good rewards':'gap.com',
+  'old navy':'oldnavy.com',
+  'banana republic':'bananarepublic.com',
+  'h&m':'hm.com','h and m':'hm.com',
+  'zara':'zara.com',
+  'uniqlo':'uniqlo.com',
+  'nike':'nike.com','nike membership':'nike.com',
+  'adidas':'adidas.com','adidas creators club':'adidas.com',
+  'delta':'delta.com','delta skymiles':'delta.com',
+  'united':'united.com','united mileageplus':'united.com',
+  'american airlines':'aa.com','aadvantage':'aa.com',
+  'air canada':'aircanada.com',
+  'westjet':'westjet.com','westjet rewards':'westjet.com',
+  'hyatt':'hyatt.com','world of hyatt':'hyatt.com',
+  'ihg':'ihg.com','ihg rewards':'ihg.com','holiday inn':'ihg.com',
+  'radisson':'radissonhotels.com','radisson rewards':'radissonhotels.com',
+  'netflix':'netflix.com','spotify':'spotify.com',
+};
+
+function resolveDomain(name) {
+  const k = name.toLowerCase().trim();
+  if (LOGO_DOMAINS[k]) return LOGO_DOMAINS[k];
+  // strip common suffixes and retry
+  const stripped = k.replace(/\b(loyalty|rewards|card|club|points|plus|membership|program)\b/g,'').replace(/\s+/g,' ').trim();
+  if (LOGO_DOMAINS[stripped]) return LOGO_DOMAINS[stripped];
+  // guess: remove non-alphanumeric and append .com
+  const guess = k.replace(/[^a-z0-9]/g,'');
+  return guess.length >= 3 ? guess + '.com' : null;
+}
+
+async function fetchLogoForCard(card) {
+  const domain = resolveDomain(card.name);
+  if (!domain) return '';
+  try {
+    const res = await fetch(`https://logo.clearbit.com/${domain}?size=128`);
+    if (!res.ok) return '';
+    const blob = await res.blob();
+    return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+  } catch { return ''; }
+}
+
+async function autoFetchLogos() {
+  const pending = cards.filter(c => c.logoImage === undefined || c.logoImage === null);
+  for (const card of pending) {
+    const logo = await fetchLogoForCard(card);
+    card.logoImage = logo; // '' = tried and failed
+    await DB.put(card);
+    if (logo) renderList(); // live update only when we got something
+  }
+}
+
+function resetLogoSlot() {
+  const slot = document.getElementById('logoSlot');
+  slot.classList.remove('has-logo');
+  slot.innerHTML = `<input type="file" accept="image/*" id="inLogo">
+    <span style="font-size:18px;color:var(--muted)">🏪</span>
+    <span style="font-size:8px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase">Logo</span>`;
+  slot.onclick = () => document.getElementById('inLogo').click();
+  document.getElementById('inLogo').onchange = handleLogoUpload;
+}
+
+function applyLogoSlot(dataUrl) {
+  const slot = document.getElementById('logoSlot');
+  slot.classList.add('has-logo');
+  slot.innerHTML = `<input type="file" accept="image/*" id="inLogo">
+    <img src="${dataUrl}" alt="logo">
+    <button class="logo-slot-del" onclick="clearLogoSlot(event)">×</button>`;
+  slot.onclick = () => document.getElementById('inLogo').click();
+  document.getElementById('inLogo').onchange = handleLogoUpload;
+}
+
+function clearLogoSlot(e) {
+  e.stopPropagation();
+  editLogo = null;
+  resetLogoSlot();
+}
+
+async function handleLogoUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const data = await resizeImg(file, 256);
+  editLogo = data;
+  applyLogoSlot(data);
 }
 
 // ── Export / Import backup ─────────────────────
@@ -1438,6 +1586,7 @@ DB.open().then(async () => {
   wireUI();
   initCropEvents();
   renderList();
+  autoFetchLogos(); // background, non-blocking
 });
 
 // ── PWA: service worker + install prompt ───────
