@@ -1427,34 +1427,41 @@ function resolveDomain(name) {
 async function fetchLogoForCard(card) {
   const domain = resolveDomain(card.name);
   if (!domain) return '';
-  // Try Clearbit first, fall back to Google Favicons
   const toBase64 = async url => {
-    const r = await fetch(url);
+    const r = await fetch(url, {mode:'cors'});
     if (!r.ok) throw new Error('bad');
+    // reject tiny images (favicon placeholder = usually < 500 bytes)
     const blob = await r.blob();
+    if (blob.size < 500) throw new Error('too small');
     return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
   };
-  try {
-    const res = await fetch(`https://logo.clearbit.com/${domain}?size=128`);
-    if (!res.ok) throw new Error('clearbit failed');
-    const blob = await res.blob();
-    return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-  } catch {
-    // Fallback: Google Favicons API
-    try {
-      return await toBase64(`https://www.google.com/s2/favicons?domain=${domain}&sz=256`);
-    } catch { return ''; }
+  // Try sources in order: Brandfetch CDN → Clearbit → DuckDuckGo → Google Favicons
+  const sources = [
+    `https://cdn.brandfetch.io/${domain}/w/400/h/400`,
+    `https://logo.clearbit.com/${domain}?size=256`,
+    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+  ];
+  for (const url of sources) {
+    try { return await toBase64(url); } catch { /* try next */ }
   }
+  return '';
 }
 
 async function autoFetchLogos() {
   const pending = cards.filter(c => !c.logoManual && (c.logoImage === undefined || c.logoImage === null || c.logoImage === ''));
+  if (!pending.length) return;
+  let done = 0, found = 0;
+  toast(`Fetching logos for ${pending.length} card${pending.length > 1 ? 's' : ''}…`);
   for (const card of pending) {
     const logo = await fetchLogoForCard(card);
-    card.logoImage = logo; // '' = tried and failed
+    card.logoImage = logo;
     await DB.put(card);
-    if (logo) renderList(); // live update only when we got something
+    done++;
+    if (logo) { found++; renderList(); }
   }
+  if (found) toast(`Found ${found} logo${found > 1 ? 's' : ''} ✓`);
+  else toast('No logos found — try adding manually via Edit card');
 }
 
 async function retryLogos() {
