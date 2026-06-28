@@ -251,6 +251,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div style="height:1px;background:var(--border);margin:3px 0"></div>
   <div class="sort-item" id="menuExport">📤 Export backup</div>
   <div class="sort-item" id="menuImport">📂 Import backup</div>
+  <div class="sort-item" id="menuRetryLogos">🔁 Retry logos</div>
   <div class="sort-item" id="menuReload">🔄 Reload app</div>
   <input type="file" accept=".json" id="inBackup" style="display:none">
 </div>
@@ -1348,6 +1349,29 @@ const LOGO_DOMAINS = {
   'ihg':'ihg.com','ihg rewards':'ihg.com','holiday inn':'ihg.com',
   'radisson':'radissonhotels.com','radisson rewards':'radissonhotels.com',
   'netflix':'netflix.com','spotify':'spotify.com',
+  'caa':'caa.ca','caa membership':'caa.ca',
+  'choice privileges':'choicehotels.com','choice hotels':'choicehotels.com',
+  'canadian tire triangle':'canadiantire.ca','triangle':'canadiantire.ca',
+  'disney castaway club':'disneyvacationclub.com','castaway club':'disneyvacationclub.com',
+  'disney vacation club':'disneyvacationclub.com','dvc':'disneyvacationclub.com',
+  'rogers':'rogers.com','rogers rewards':'rogers.com',
+  'fido':'fido.ca','bell':'bell.ca','telus':'telus.com',
+  'rbc':'rbc.com','td':'td.com','bmo':'bmo.com','cibc':'cibc.com','scotiabank':'scotiabank.com',
+  'scene rewards':'scene.ca',
+  'realcanadiansuperstore':'realcanadiansuperstore.ca','real canadian superstore':'realcanadiansuperstore.ca','superstore':'realcanadiansuperstore.ca',
+  'vons':'vons.com','safeway':'safeway.com','kroger':'kroger.com','target':'target.com',
+  'cvs':'cvs.com','cvs pharmacy':'cvs.com','walgreens':'walgreens.com',
+  'dollar general':'dollargeneral.com','dollar tree':'dollartree.com',
+  'tj maxx':'tjmaxx.com','tjmaxx':'tjmaxx.com','marshalls':'marshalls.com','homegoods':'homegoods.com',
+  'ulta':'ulta.com','ulta beauty':'ulta.com',
+  'michaels':'michaels.com','jo-ann':'joann.com','hobby lobby':'hobbylobby.com',
+  'petsmart':'petsmart.com','petco':'petco.com',
+  'panera':'panerabread.com','panera bread':'panerabread.com',
+  'subway':'subway.com','mcdonalds':"mcdonalds.com","mcdonald's":'mcdonalds.com',
+  'wendys':"wendys.com","wendy's":'wendys.com',
+  'dominos':'dominos.com',"domino's":'dominos.com',
+  'pizzahut':'pizzahut.com','pizza hut':'pizzahut.com',
+  'chipotle':'chipotle.com','five guys':'fiveguys.com',
 };
 
 function resolveDomain(name) {
@@ -1364,22 +1388,40 @@ function resolveDomain(name) {
 async function fetchLogoForCard(card) {
   const domain = resolveDomain(card.name);
   if (!domain) return '';
+  // Try Clearbit first, fall back to Google Favicons
+  const toBase64 = async url => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('bad');
+    const blob = await r.blob();
+    return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+  };
   try {
     const res = await fetch(`https://logo.clearbit.com/${domain}?size=128`);
-    if (!res.ok) return '';
+    if (!res.ok) throw new Error('clearbit failed');
     const blob = await res.blob();
     return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-  } catch { return ''; }
+  } catch {
+    // Fallback: Google Favicons API
+    try {
+      return await toBase64(`https://www.google.com/s2/favicons?domain=${domain}&sz=256`);
+    } catch { return ''; }
+  }
 }
 
 async function autoFetchLogos() {
-  const pending = cards.filter(c => c.logoImage === undefined || c.logoImage === null);
+  const pending = cards.filter(c => !c.logoManual && (c.logoImage === undefined || c.logoImage === null || c.logoImage === ''));
   for (const card of pending) {
     const logo = await fetchLogoForCard(card);
     card.logoImage = logo; // '' = tried and failed
     await DB.put(card);
     if (logo) renderList(); // live update only when we got something
   }
+}
+
+async function retryLogos() {
+  cards.filter(c => !c.logoManual).forEach(c => { c.logoImage = null; });
+  await Promise.all(cards.filter(c => !c.logoManual).map(c => DB.put(c)));
+  autoFetchLogos();
 }
 
 function resetLogoSlot() {
@@ -1528,6 +1570,7 @@ function wireUI() {
   // Export / import backup
   document.getElementById('menuExport').onclick = () => { sortMenu.classList.remove('open'); exportCards(); };
   document.getElementById('menuImport').onclick = () => { sortMenu.classList.remove('open'); document.getElementById('inBackup').click(); };
+  document.getElementById('menuRetryLogos').onclick = () => { sortMenu.classList.remove('open'); toast('Retrying logos…'); retryLogos(); };
   document.getElementById('menuReload').onclick = () => {
     sortMenu.classList.remove('open');
     if ('serviceWorker' in navigator) {
