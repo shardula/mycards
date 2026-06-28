@@ -197,9 +197,10 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);disp
 .crop-title-lbl{font-size:15px;font-weight:500;color:#fff;}
 .crop-cancel{padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.1);color:#fff;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;}
 .crop-confirm{padding:8px 18px;border-radius:10px;border:none;background:var(--gold);color:#0e1117;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
-.crop-stage{flex:1;position:relative;overflow:hidden;touch-action:none;user-select:none;}
+.crop-stage{flex:1;position:relative;touch-action:none;user-select:none;}
 #cropImg{position:absolute;display:block;max-width:none;}
-.crop-box{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,0.6);cursor:move;touch-action:none;
+.crop-shade{position:absolute;background:rgba(0,0,0,0.62);pointer-events:none;z-index:1;}
+.crop-box{position:absolute;cursor:move;touch-action:none;z-index:2;
   background:linear-gradient(rgba(255,255,255,0.12) 1px,transparent 1px) 0 33.33%/100% 33.34%,
              linear-gradient(90deg,rgba(255,255,255,0.12) 1px,transparent 1px) 33.33% 0/33.34% 100%;}
 .crop-border{position:absolute;inset:0;border:2px solid rgba(255,255,255,0.9);pointer-events:none;}
@@ -407,6 +408,10 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);disp
   </div>
   <div class="crop-stage" id="cropStage">
     <img id="cropImg" alt="">
+    <div class="crop-shade" id="csTop"></div>
+    <div class="crop-shade" id="csBot"></div>
+    <div class="crop-shade" id="csLeft"></div>
+    <div class="crop-shade" id="csRight"></div>
     <div class="crop-box" id="cropBox">
       <div class="crop-border"></div>
       <div class="crop-handle ch-tl" data-h="tl"></div>
@@ -1029,6 +1034,8 @@ async function handlePhoto(e, side) {
         document.getElementById('fNumber').value = scan.value;
         document.getElementById('fBarcodeType').value = mapBarcodeFormat(scan.format);
         toast('Barcode auto-detected ✓');
+      } else if (!scan && !document.getElementById('fNumber').value.trim()) {
+        toast('No barcode detected — type number manually');
       }
     } else { editBack = cropped; }
     applySlot(side, cropped);
@@ -1047,7 +1054,7 @@ function cropImportItem(i) {
       importDrafts[i].barcodeType = mapBarcodeFormat(scan.format);
       toast('Cropped · Barcode detected ✓');
     } else {
-      toast('Photo cropped');
+      toast('Cropped — type card number manually');
     }
     renderImportList();
   });
@@ -1086,8 +1093,15 @@ function openCrop(dataUrl, callback) {
 
 function updateCropBoxEl() {
   const el = document.getElementById('cropBox');
-  el.style.left = _cropBox.x + 'px'; el.style.top = _cropBox.y + 'px';
-  el.style.width = _cropBox.w + 'px'; el.style.height = _cropBox.h + 'px';
+  const b = _cropBox;
+  el.style.left = b.x + 'px'; el.style.top = b.y + 'px';
+  el.style.width = b.w + 'px'; el.style.height = b.h + 'px';
+  const st = document.getElementById('cropStage');
+  const sw = st.clientWidth, sh = st.clientHeight;
+  document.getElementById('csTop').style.cssText   = `left:0;top:0;right:0;height:${b.y}px`;
+  document.getElementById('csBot').style.cssText   = `left:0;bottom:0;right:0;height:${Math.max(0,sh-b.y-b.h)}px`;
+  document.getElementById('csLeft').style.cssText  = `left:0;top:${b.y}px;width:${b.x}px;height:${b.h}px`;
+  document.getElementById('csRight').style.cssText = `left:${b.x+b.w}px;top:${b.y}px;right:0;height:${b.h}px`;
 }
 
 function confirmCrop() {
