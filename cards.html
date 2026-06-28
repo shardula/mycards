@@ -312,7 +312,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
     <div class="f-group" style="display:flex;align-items:center;gap:12px">
       <div class="logo-slot" id="logoSlot">
-        <input type="file" accept="image/*" id="inLogo">
+        <input type="file" accept="image/*,*/*" id="inLogo">
         <span style="font-size:18px;color:var(--muted)">🏪</span>
         <span style="font-size:8px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase">Logo</span>
       </div>
@@ -1474,7 +1474,7 @@ async function retryLogos() {
 function resetLogoSlot() {
   const slot = document.getElementById('logoSlot');
   slot.classList.remove('has-logo');
-  slot.innerHTML = `<input type="file" accept="image/*" id="inLogo">
+  slot.innerHTML = `<input type="file" accept="image/*,*/*" id="inLogo">
     <span style="font-size:18px;color:var(--muted)">🏪</span>
     <span style="font-size:8px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase">Logo</span>`;
   slot.onclick = () => document.getElementById('inLogo').click();
@@ -1484,7 +1484,7 @@ function resetLogoSlot() {
 function applyLogoSlot(dataUrl) {
   const slot = document.getElementById('logoSlot');
   slot.classList.add('has-logo');
-  slot.innerHTML = `<input type="file" accept="image/*" id="inLogo">
+  slot.innerHTML = `<input type="file" accept="image/*,*/*" id="inLogo">
     <img src="${dataUrl}" alt="logo">
     <button class="logo-slot-del" onclick="clearLogoSlot(event)">×</button>`;
   slot.onclick = () => document.getElementById('inLogo').click();
@@ -1499,9 +1499,12 @@ function clearLogoSlot(e) {
 
 async function handleLogoUpload(e) {
   const file = e.target.files[0]; if (!file) return;
-  const data = await resizeImg(file, 256);
-  editLogo = data;
-  applyLogoSlot(data);
+  const reader = new FileReader();
+  reader.onload = ev => openCrop(ev.target.result, cropped => {
+    editLogo = cropped;
+    applyLogoSlot(cropped);
+  });
+  reader.readAsDataURL(file);
 }
 
 // ── Export / Import backup ─────────────────────
