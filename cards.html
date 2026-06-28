@@ -6,8 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="My Cards">
-<meta name="theme-color" content="#0e1117">
+<meta name="theme-color" content="#c9a84c">
 <title>My Cards</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0e1117;--bg2:#151820;--bg3:#1c2030;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);--text:#e8e2d4;--muted:#7a7264;--gold:#c9a84c;--gold-dim:rgba(201,168,76,0.15);--gold-border:rgba(201,168,76,0.35);--green:#4caf7d;--red:#e05252;}
@@ -855,8 +857,13 @@ function renderDetail() {
       ${f.toggle ? `<button class="copy-btn" id="toggleCode" onclick="doToggleCode()">👁 Show</button>` : ''}
     </div>`).join('');
 
+  const frontPreview = c.frontImage && c.number
+    ? `<div style="border-radius:13px;overflow:hidden;border:1px solid var(--border);margin-bottom:10px"><img src="${c.frontImage}" style="width:100%;display:block;aspect-ratio:8/5;object-fit:cover" alt="Card front"></div>`
+    : '';
+
   document.getElementById('detContent').innerHTML = `
     <div style="font-family:'Playfair Display',serif;font-size:20px;margin-bottom:10px">${esc(c.name)}</div>
+    ${frontPreview}
     ${renderBarcodeSection(c)}
     <div class="flip-wrap ${flipped ? 'flipped' : ''}" id="flipWrap" onclick="doFlip()">
       <div class="flip-inner">
@@ -1183,6 +1190,26 @@ DB.open().then(async () => {
   cards = await DB.getAll();
   wireUI();
   renderList();
+});
+
+// ── PWA: service worker + install prompt ───────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+let _deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstall = e;
+  // Show a subtle "Add to Home Screen" button if not already installed
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    const btn = document.createElement('button');
+    btn.className = 'act-btn prim';
+    btn.style.cssText = 'position:fixed;bottom:calc(env(safe-area-inset-bottom,0px)+84px);left:50%;transform:translateX(-50%);z-index:90;white-space:nowrap;padding:10px 20px;border-radius:14px;font-size:13px';
+    btn.textContent = '📲 Add to Home Screen';
+    btn.onclick = () => { _deferredInstall.prompt(); btn.remove(); };
+    document.body.appendChild(btn);
+  }
 });
 </script>
 </body>
